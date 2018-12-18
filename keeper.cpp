@@ -5,6 +5,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMap>
+#include <QVector>
 
 Keeper::Keeper(QObject *parent) : QObject(parent)
 {
@@ -59,7 +60,7 @@ int Keeper::saveSettings(const QMap<QString, unsigned int> &settings)
     return 100;
 }
 
-int Keeper::loadSettings(QMap<QString, unsigned int> &settings)
+QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
 {
     QFile file;
     QDir::setCurrent(QApplication::applicationDirPath());
@@ -72,87 +73,89 @@ int Keeper::loadSettings(QMap<QString, unsigned int> &settings)
     }
     catch(int key)
     {
-        return key; // ошибка: нет файла
+        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+        return new QVector<int>(QVector<int>::fromStdVector(errors)); // ошибка: нет файла
     }
 
 
     QJsonDocument jsonDoc = QJsonDocument::fromJson(file.readAll());
     file.close();
 
-    if(jsonDoc.isEmpty() || jsonDoc.isNull())
-        return 0; // файл пуст или не содержит корректные настройки
+    if(jsonDoc.isEmpty() || jsonDoc.isNull() || jsonDoc.object().isEmpty())
+    {
+        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+        return new QVector<int>(QVector<int>::fromStdVector(errors)); // файл пуст или не содержит корректные настройки
+    }
 
-    if(jsonDoc.object().isEmpty())
-        return 0;
+    QVector<int> *errors = new QVector<int>;
 
     if(jsonDoc.object().value("speed x") == QJsonValue::Undefined)
-        return 0;
+        errors->push_back(0);
     else settings.insert("speed x", static_cast<const unsigned int>(jsonDoc.object().value("speed x").toInt()));
 
     if(jsonDoc.object().value("speed y") == QJsonValue::Undefined)
-        return 1;
+        errors->push_back(1);
     else settings.insert("speed y", static_cast<const unsigned int>(jsonDoc.object().value("speed y").toInt()));
 
     if(jsonDoc.object().value("up") == QJsonValue::Undefined)
-        return 2; // смогли загрузить только 1 настройку в указанном порядке
+        errors->push_back(2);
     else settings.insert("up", static_cast<const unsigned int>(jsonDoc.object().value("up").toInt()));
 
     if(jsonDoc.object().value("down") == QJsonValue::Undefined)
-        return 3; // смогли загрузить только 2 настройку в указанном порядке
+        errors->push_back(3);
     else settings.insert("down", static_cast<const unsigned int>(jsonDoc.object().value("down").toInt()));
 
     if(jsonDoc.object().value("right") == QJsonValue::Undefined)
-        return 4;
+        errors->push_back(4);
     else settings.insert("right", static_cast<const unsigned int>(jsonDoc.object().value("right").toInt()));
 
     if(jsonDoc.object().value("left") == QJsonValue::Undefined)
-        return 5;
+        errors->push_back(5);
     else settings.insert("left", static_cast<const unsigned int>(jsonDoc.object().value("left").toInt()));
 
     if(jsonDoc.object().value("top-right") == QJsonValue::Undefined)
-        return 6;
+        errors->push_back(6);
     else settings.insert("top-right", static_cast<const unsigned int>(jsonDoc.object().value("top-right").toInt()));
 
     if(jsonDoc.object().value("top-left") == QJsonValue::Undefined)
-        return 7;
+        errors->push_back(7);
     else settings.insert("top-left", static_cast<const unsigned int>(jsonDoc.object().value("top-left").toInt()));
 
     if(jsonDoc.object().value("down-right") == QJsonValue::Undefined)
-        return 8;
+        errors->push_back(8);
     else settings.insert("down-right", static_cast<const unsigned int>(jsonDoc.object().value("down-right").toInt()));
 
     if(jsonDoc.object().value("down-left") == QJsonValue::Undefined)
-        return 9;
+        errors->push_back(9);
     else settings.insert("down-left", static_cast<const unsigned int>(jsonDoc.object().value("down-left").toInt()));
 
     if(jsonDoc.object().value("click") == QJsonValue::Undefined)
-        return 10;
+        errors->push_back(10);
     else settings.insert("click", static_cast<const unsigned int>(jsonDoc.object().value("click").toInt()));
 
     if(jsonDoc.object().value("right click") == QJsonValue::Undefined)
-        return 11;
+        errors->push_back(11);
     else settings.insert("right click", static_cast<const unsigned int>(jsonDoc.object().value("right click").toInt()));
 
     if(jsonDoc.object().value("autorun") == QJsonValue::Undefined)
-        return 12;
+        errors->push_back(12);
     else settings.insert("autorun", static_cast<Qt::CheckState>(jsonDoc.object().value("autorun").toInt()));
 
     if(jsonDoc.object().value("hot key") == QJsonValue::Undefined)
-        return 13;
+        errors->push_back(13);
     else settings.insert("hot key", static_cast<Qt::CheckState>(jsonDoc.object().value("hot key").toInt()));
 
     if(jsonDoc.object().value("Ctrl state") == QJsonValue::Undefined)
-        return 14;
+        errors->push_back(14);
     else settings.insert("Ctrl state", static_cast<const unsigned int>(jsonDoc.object().value("Ctrl state").toInt()));
 
     if(jsonDoc.object().value("Alt state") == QJsonValue::Undefined)
-        return 15;
+        errors->push_back(15);
     else settings.insert("Alt state", static_cast<const unsigned int>(jsonDoc.object().value("Alt state").toInt()));
 
     if(jsonDoc.object().value("another key state") == QJsonValue::Undefined)
-        return 16;
+        errors->push_back(16);
     else settings.insert("another key state", static_cast<const unsigned int>(jsonDoc.object().value("another key state").toInt()));
 
-    /* 100 - это признак удачного завершения функции */
-    return 100; // все хорошо, все настройки были считаны верно
+    return errors;
 }

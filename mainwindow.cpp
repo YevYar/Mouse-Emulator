@@ -65,7 +65,7 @@ bool MainWindow::isStartKeyLineEdit(const QLineEdit *line)
     return line == this->ui->lineEditStarKey;
 }
 
-int MainWindow::load(QMap<QString, unsigned int> *settings)
+QVector<int> *MainWindow::load(QMap<QString, unsigned int> *settings)
 {
     return this->keeper->loadSettings(*settings);
 }

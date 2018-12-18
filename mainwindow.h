@@ -40,7 +40,7 @@ public:
 
     // настройка клавиши запуска приложения имеет особый характер, т.к. позволяет устанавливать комбинации клавиш
     bool isStartKeyLineEdit(const QLineEdit *); // проверяет, активное поле - это поле для стартовой комбинации или нет
-    int load(QMap<QString, unsigned int> *settings); // вызывает соответствующий метод класса Keeper
+    QVector<int> *load(QMap<QString, unsigned int> *settings); // вызывает соответствующий метод класса Keeper
     int save(const QMap<QString, unsigned int> *settings); // вызывает соответствующий метод класса Keeper
 
     // ярлык нужен для того, чтобы можно было запустить программу по нажатии комбинации клавиш

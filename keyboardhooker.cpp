@@ -2,6 +2,7 @@
 #include "mainwindow.h"
 #include "shlobj.h"
 #include <QApplication>
+#include <QDebug>
 #include <QLineEdit>
 #include <QMessageBox>
 
@@ -70,30 +71,44 @@ QString KeyBoardHooker::getSettingNameByKeyName(QString keyName, bool settingMap
     return QString();
 }
 
-void KeyBoardHooker::configureSettings(int code)
+void KeyBoardHooker::configureSettings(QVector<int> *errors)
 {
-    switch(code)
-    {
-        case -1: ;
-        case 0: settings.insert("speed x", 5);
-        case 1: settings.insert("speed y", 5);
-        case 2: settings.insert("up", 0x26/*0x68*/);
-        case 3: settings.insert("down", 0x28/*0x62*/);
-        case 4: settings.insert("right", 0x27/*0x66*/);
-        case 5: settings.insert("left", 0x25/*0x64*/);
-        case 6: settings.insert("top-right", 0x69);
-        case 7: settings.insert("top-left", 0x67);
-        case 8: settings.insert("down-right", 0x63);
-        case 9: settings.insert("down-left", 0x61);
-        case 10: settings.insert("click", 0x65);
-        case 11: settings.insert("right click", 0x60);
-        case 12: settings.insert("autorun", Qt::Checked);
-        case 13: settings.insert("hot key", Qt::Checked);
-        case 14: settings.insert("Ctrl state", HOTKEYF_CONTROL);
-        case 15: settings.insert("Alt state", HOTKEYF_ALT);
-        case 16: settings.insert("another key state", 0x76); break;
-        case 100: ; break;
-    }
+    if(errors->isEmpty())
+        return;
+    if(errors->contains(0))
+        settings.insert("speed x", 5);
+    if(errors->contains(1))
+        settings.insert("speed y", 5);
+    if(errors->contains(2))
+        settings.insert("up", 0x26/*0x68*/);
+    if(errors->contains(3))
+        settings.insert("down", 0x28/*0x62*/);
+    if(errors->contains(4))
+        settings.insert("right", 0x27/*0x66*/);
+    if(errors->contains(5))
+        settings.insert("left", 0x25/*0x64*/);
+    if(errors->contains(6))
+        settings.insert("top-right", 0x69);
+    if(errors->contains(7))
+        settings.insert("top-left", 0x67);
+    if(errors->contains(8))
+        settings.insert("down-right", 0x63);
+    if(errors->contains(9))
+        settings.insert("down-left", 0x61);
+    if(errors->contains(10))
+        settings.insert("click", 0x65);
+    if(errors->contains(11))
+        settings.insert("right click", 0x60);
+    if(errors->contains(12))
+        settings.insert("autorun", Qt::Checked);
+    if(errors->contains(13))
+        settings.insert("hot key", Qt::Checked);
+    if(errors->contains(14))
+        settings.insert("Ctrl state", HOTKEYF_CONTROL);
+    if(errors->contains(15))
+        settings.insert("Alt state", HOTKEYF_ALT);
+    if(errors->contains(16))
+        settings.insert("another key state", 0x76);
 }
 
 void KeyBoardHooker::setNewKeyValue(QString key, unsigned int value)

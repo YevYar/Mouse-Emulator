@@ -18,7 +18,7 @@ class Keeper : public QObject
 
 public:
     Keeper(QObject *parent = nullptr);
-    int loadSettings(QMap<QString, unsigned int> &settings);
+    QVector<int> *loadSettings(QMap<QString, unsigned int> &settings);
     int saveSettings(const QMap<QString, unsigned int> &settings);
 
 };
