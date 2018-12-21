@@ -53,6 +53,11 @@ public:
 private:
     Ui::MainWindow *ui;
     void createConnect();
+    void createConnectButtons();
+    void createConnectCheckBoxes();
+    void createConnectLineEdits();
+    void createConnectSliders();
+    void createConnectSpinBoxes();
     void createMenuBar();
     void createTrayActions();
     void initialiseTray();

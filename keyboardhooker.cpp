@@ -17,7 +17,7 @@ KeyBoardHooker::KeyBoardHooker(QObject *parent) : QObject(parent)
     keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHookProc, hInstance, 0);
 
     if(keyboardHook == nullptr)
-        QMessageBox::critical(nullptr, "Критична помилка", "<p style='font-size:12pt'>Програма не може виконувати основну функцію (керувати мишкою за допомогою клавіатури) через помилку під'єднання до системних подій.</p>");
+        QMessageBox::critical(nullptr, tr("Критична помилка"), tr("<p style='font-size:12pt'>Програма не може виконувати основну функцію (керувати мишкою за допомогою клавіатури) через помилку під'єднання до системних подій.</p>"));
 }
 
 QMap<QString, unsigned int> *KeyBoardHooker::getSettings()
@@ -61,7 +61,7 @@ QString KeyBoardHooker::getSettingNameByKeyName(QString keyName, bool settingMap
     QMap<QString, unsigned int> settings = settingMap ? tempSettings : KeyBoardHooker::settings;
     QMap<QString, unsigned int>::const_iterator i = settings.constBegin();
     while (i != settings.constEnd()) {
-        if(i.key() != QString("speed x") && i.key() != QString("speed y") && i.key() != QString("autorun") &&
+        if(i.key() != QString("speed x") && i.key() != QString("speed y") && i.key() != QString("speed wheel") && i.key() != QString("autorun") &&
                 i.key() != QString("hot key") && i.key() != QString("Ctrl state") && i.key() != QString("Alt state") &&
                 i.key() != QString("another key state") && getKeyNameByVirtualKey(i.value()) == keyName)
             return i.key();
@@ -109,6 +109,12 @@ void KeyBoardHooker::configureSettings(QVector<int> *errors)
         settings.insert("Alt state", HOTKEYF_ALT);
     if(errors->contains(16))
         settings.insert("another key state", 0x76);
+    if(errors->contains(17))
+        settings.insert("speed wheel", 5);
+    if(errors->contains(18))
+        settings.insert("wheel up", 0x6b);
+    if(errors->contains(19))
+        settings.insert("wheel down", 0x6d);
 }
 
 void KeyBoardHooker::setNewKeyValue(QString key, unsigned int value)
@@ -186,7 +192,39 @@ LRESULT CALLBACK KeyBoardHooker::keyboardHookProc(int nCode, WPARAM wParam, LPAR
     if (p->vkCode == VK_F11 && bControlKeyDown && !w->isVisible())
         w->show();
 
-    if (wParam == WM_SYSKEYDOWN || wParam == WM_KEYDOWN)
+    static bool leftMouseButDown = false;
+    static bool rightMouseButDown = false;
+    static bool toUpButDown = false;
+    static bool toDownButDown = false;
+    static bool toRightButDown = false;
+    static bool toLeftButDown = false;
+
+    if (wParam == WM_SYSKEYUP || wParam == WM_KEYUP)
+    {
+        POINT currentPos;
+        GetCursorPos(&currentPos);
+
+        if(p->vkCode == settings["right click"])
+        {
+            rightMouseButDown = false;
+            mouse_event(MOUSEEVENTF_RIGHTUP, static_cast<DWORD>(currentPos.x), static_cast<DWORD>(currentPos.y), 0, 0);
+        }
+        else if(p->vkCode == settings["click"])
+        {
+            leftMouseButDown = false;
+            mouse_event(MOUSEEVENTF_LEFTUP, static_cast<DWORD>(currentPos.x), static_cast<DWORD>(currentPos.y), 0, 0);
+        }
+        else if(p->vkCode == settings["up"])
+            toUpButDown = false;
+        else if(p->vkCode == settings["down"])
+            toDownButDown = false;
+        else if(p->vkCode == settings["right"])
+            toRightButDown = false;
+        else if(p->vkCode == settings["left"])
+            toLeftButDown = false;
+        else return CallNextHookEx(nullptr, nCode, wParam, lParam);
+    }
+    else if (wParam == WM_SYSKEYDOWN || wParam == WM_KEYDOWN)
     {
         if(w->isActiveWindow() && w->getFocusedLineEdit() != nullptr && p->vkCode != VK_TAB)
         {
@@ -227,33 +265,63 @@ LRESULT CALLBACK KeyBoardHooker::keyboardHookProc(int nCode, WPARAM wParam, LPAR
                 w->getFocusedLineEdit()->setText(tmpKeyName);
                 return 0;
             }
-            else QMessageBox::warning(w, "Увага", "<p style='font-size:12pt'>Обрана клавіша вже використовується.</p>");
+            else QMessageBox::warning(w, tr("Увага"), tr("<p style='font-size:12pt'>Обрана клавіша вже використовується.</p>"));
         }
 
         POINT currentPos;
         GetCursorPos(&currentPos);
 
-        // Virtual key codes reference: http://msdn.microsoft.com/en-us/library/dd375731%28v=VS.85%29.aspx
-        if(p->vkCode == settings["right click"]) // Compare virtual keycode to hex values and log keys accordingly
-            mouse_event(MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP, static_cast<DWORD>(currentPos.x), static_cast<DWORD>(currentPos.y), 0, 0);
+        // Virtual key codes reference: http://msdn.microsoft.com/en-us/library/dd375731%28v=VS.85%29.aspx  
+        if(toUpButDown && toRightButDown)
+            SetCursorPos(static_cast<int>(static_cast<unsigned long>(currentPos.x) + settings["speed x"]), static_cast<int>(static_cast<unsigned long>(currentPos.y) - settings["speed y"]));
+        else if(toUpButDown && toLeftButDown)
+            SetCursorPos(static_cast<int>(static_cast<unsigned long>(currentPos.x) - settings["speed x"]), static_cast<int>(static_cast<unsigned long>(currentPos.y) - settings["speed y"]));
+        else if(toDownButDown && toRightButDown)
+            SetCursorPos(static_cast<int>(static_cast<unsigned long>(currentPos.x) + settings["speed x"]), static_cast<int>(static_cast<unsigned long>(currentPos.y) + settings["speed y"]));
+        else if(toDownButDown && toLeftButDown)
+            SetCursorPos(static_cast<int>(static_cast<unsigned long>(currentPos.x) - settings["speed x"]), static_cast<int>(static_cast<unsigned long>(currentPos.y) + settings["speed y"]));
+        else if(p->vkCode == settings["right click"])
+        {
+            rightMouseButDown = true;
+            mouse_event(MOUSEEVENTF_RIGHTDOWN, static_cast<DWORD>(currentPos.x), static_cast<DWORD>(currentPos.y), 0, 0);
+        }
         else if(p->vkCode == settings["down-left"])
             SetCursorPos(static_cast<int>(static_cast<unsigned long>(currentPos.x) - settings["speed x"]), static_cast<int>(static_cast<unsigned long>(currentPos.y) + settings["speed y"]));
         else if(p->vkCode == settings["down"])
+        {
+            toDownButDown = true;
             SetCursorPos(currentPos.x, static_cast<int>(static_cast<unsigned long>(currentPos.y) + settings["speed y"]));
+        }
         else if(p->vkCode == settings["down-right"])
             SetCursorPos(static_cast<int>(static_cast<unsigned long>(currentPos.x) + settings["speed x"]), static_cast<int>(static_cast<unsigned long>(currentPos.y) + settings["speed y"]));
         else if(p->vkCode == settings["left"])
+        {
+            toLeftButDown = true;
             SetCursorPos(static_cast<int>(static_cast<unsigned long>(currentPos.x) - settings["speed x"]), currentPos.y);
-        else if(p->vkCode == settings["click"])
-            mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, static_cast<DWORD>(currentPos.x), static_cast<DWORD>(currentPos.y), 0, 0);
+        }
+        else if(p->vkCode == settings["click"] && !leftMouseButDown)
+        {
+            leftMouseButDown = true;
+            mouse_event(MOUSEEVENTF_LEFTDOWN, static_cast<DWORD>(currentPos.x), static_cast<DWORD>(currentPos.y), 0, 0);
+        }
         else if(p->vkCode == settings["right"])
+        {
+            toRightButDown = true;
             SetCursorPos(static_cast<int>(static_cast<unsigned long>(currentPos.x) + settings["speed x"]), currentPos.y);
+        }
         else if(p->vkCode == settings["top-left"])
             SetCursorPos(static_cast<int>(static_cast<unsigned long>(currentPos.x) - settings["speed x"]), static_cast<int>(static_cast<unsigned long>(currentPos.y) - settings["speed y"]));
         else if(p->vkCode == settings["up"])
+        {
+            toUpButDown = true;
             SetCursorPos(currentPos.x, static_cast<int>(static_cast<unsigned long>(currentPos.y) - settings["speed y"]));
+        }
         else if(p->vkCode == settings["top-right"])
             SetCursorPos(static_cast<int>(static_cast<unsigned long>(currentPos.x) + settings["speed x"]), static_cast<int>(static_cast<unsigned long>(currentPos.y) - settings["speed y"]));
+        else if(p->vkCode == settings["wheel up"])
+            mouse_event(MOUSEEVENTF_WHEEL, static_cast<DWORD>(currentPos.x), static_cast<DWORD>(currentPos.y), static_cast<DWORD>(settings["speed wheel"]), 0);
+        else if(p->vkCode == settings["wheel down"])
+            mouse_event(MOUSEEVENTF_WHEEL, static_cast<DWORD>(currentPos.x), static_cast<DWORD>(currentPos.y), -static_cast<DWORD>(settings["speed wheel"]), 0);
         else return CallNextHookEx(nullptr, nCode, wParam, lParam);
     }
     else return CallNextHookEx(nullptr, nCode, wParam, lParam);

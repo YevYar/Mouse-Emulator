@@ -35,6 +35,9 @@ int Keeper::saveSettings(const QMap<QString, unsigned int> &settings)
     obj.insert("Ctrl state", static_cast<int>(settings["Ctrl state"]));
     obj.insert("Alt state", static_cast<int>(settings["Alt state"]));
     obj.insert("another key state", static_cast<int>(settings["another key state"]));
+    obj.insert("speed wheel", static_cast<int>(settings["speed wheel"]));
+    obj.insert("wheel up", static_cast<int>(settings["wheel up"]));
+    obj.insert("wheel down", static_cast<int>(settings["wheel down"]));
 
     QJsonDocument jsonDoc;
     jsonDoc.setObject(obj);
@@ -73,7 +76,7 @@ QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
     }
     catch(int key)
     {
-        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
         return new QVector<int>(QVector<int>::fromStdVector(errors)); // ошибка: нет файла
     }
 
@@ -83,7 +86,7 @@ QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
 
     if(jsonDoc.isEmpty() || jsonDoc.isNull() || jsonDoc.object().isEmpty())
     {
-        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
         return new QVector<int>(QVector<int>::fromStdVector(errors)); // файл пуст или не содержит корректные настройки
     }
 
@@ -156,6 +159,18 @@ QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
     if(jsonDoc.object().value("another key state") == QJsonValue::Undefined)
         errors->push_back(16);
     else settings.insert("another key state", static_cast<const unsigned int>(jsonDoc.object().value("another key state").toInt()));
+
+    if(jsonDoc.object().value("speed wheel") == QJsonValue::Undefined)
+        errors->push_back(17);
+    else settings.insert("speed wheel", static_cast<const unsigned int>(jsonDoc.object().value("speed wheel").toInt()));
+
+    if(jsonDoc.object().value("wheel up") == QJsonValue::Undefined)
+        errors->push_back(18);
+    else settings.insert("wheel up", static_cast<const unsigned int>(jsonDoc.object().value("wheel up").toInt()));
+
+    if(jsonDoc.object().value("wheel down") == QJsonValue::Undefined)
+        errors->push_back(19);
+    else settings.insert("wheel down", static_cast<const unsigned int>(jsonDoc.object().value("wheel down").toInt()));
 
     return errors;
 }

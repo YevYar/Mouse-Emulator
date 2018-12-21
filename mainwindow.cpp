@@ -7,6 +7,7 @@
 #include "windows.h"
 #include <QAction>
 #include <QCloseEvent>
+#include <QDebug>
 #include <QDir>
 #include <QIcon>
 #include <QMenu>
@@ -160,8 +161,15 @@ void MainWindow::allowClose(bool value)
 
 void MainWindow::displaySettings(const QMap<QString, unsigned int> *settings)
 {
+    this->ui->sliderSpeedX->setRange(1, 100);
+    this->ui->spinBoxSpeedX->setRange(1, 100);
+    this->ui->sliderSpeedY->setRange(1, 100);
+    this->ui->spinBoxSpeedY->setRange(1, 100);
+    this->ui->sliderSpeedWheel->setRange(1, 2000);
+    this->ui->spinBoxSpeedWheel->setRange(1, 2000);
     ui->sliderSpeedX->setValue(static_cast<int>(settings->value("speed x")));
     ui->sliderSpeedY->setValue(static_cast<int>(settings->value("speed y")));
+    ui->sliderSpeedWheel->setValue(static_cast<int>(settings->value("speed wheel")));
     ui->checkBoxAutoStart->setCheckState(static_cast<Qt::CheckState>(settings->value("autorun")));
     ui->checkBoxStartKey->setCheckState(static_cast<Qt::CheckState>(settings->value("hot key")));
 
@@ -205,6 +213,14 @@ void MainWindow::displaySettings(const QMap<QString, unsigned int> *settings)
     if( !tmp.isEmpty())
         ui->lineEditRightClick->setText(tmp);
 
+    tmp = KeyBoardHooker::getKeyNameByVirtualKey(settings->value("wheel up"));
+    if( !tmp.isEmpty())
+        ui->lineEditWheelUp->setText(tmp);
+
+    tmp = KeyBoardHooker::getKeyNameByVirtualKey(settings->value("wheel down"));
+    if( !tmp.isEmpty())
+        ui->lineEditWheelDown->setText(tmp);
+
     if(settings->value("hot key") == Qt::Checked)
         ui->lineEditStarKey->setText( getHotKeyCombinationString(settings) );
 
@@ -224,41 +240,27 @@ void MainWindow::installEventFilters()
     ui->lineEditClick->installEventFilter(this);
     ui->lineEditRightClick->installEventFilter(this);
     ui->lineEditStarKey->installEventFilter(this);
+    ui->lineEditWheelUp->installEventFilter(this);
+    ui->lineEditWheelDown->installEventFilter(this);
 }
 
 void MainWindow::createConnect()
 {
-    this->ui->sliderSpeedX->setRange(1, 100);
-    this->ui->spinBoxSpeedX->setRange(1, 100);
-    this->ui->sliderSpeedY->setRange(1, 100);
-    this->ui->spinBoxSpeedY->setRange(1, 100);
+    createConnectSliders();
+    createConnectSpinBoxes();
+    createConnectLineEdits();
+    createConnectButtons();
+    createConnectCheckBoxes();
+}
 
-    connect(this->ui->sliderSpeedX, &QSlider::valueChanged, [this] (int value) {
-                                this->ui->spinBoxSpeedX->setValue(value);
-                                KeyBoardHooker::setTempSetting("speed x", static_cast<unsigned int>(value));
-                                this->ui->pushButtonCancel->setEnabled(true);
-    });
-    connect(this->ui->spinBoxSpeedX, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this] (int value) {
-                                this->ui->sliderSpeedX->setValue(value);
-                                KeyBoardHooker::setTempSetting("speed x", static_cast<unsigned int>(value));
-                                this->ui->pushButtonCancel->setEnabled(true);
-    });
-    connect(this->ui->sliderSpeedY, &QSlider::valueChanged, [this] (int value) {
-                                this->ui->spinBoxSpeedY->setValue(value);
-                                KeyBoardHooker::setTempSetting("speed y", static_cast<unsigned int>(value));
-                                this->ui->pushButtonCancel->setEnabled(true);
-    });
-    connect(this->ui->spinBoxSpeedY, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this] (int value) {
-                                this->ui->sliderSpeedY->setValue(value);
-                                KeyBoardHooker::setTempSetting("speed y", static_cast<unsigned int>(value));
-                                this->ui->pushButtonCancel->setEnabled(true);
-    });
+void MainWindow::createConnectButtons()
+{
     connect(this->ui->pushButtonOk, &QPushButton::pressed, [this] () {
                                 if( !KeyBoardHooker::getTempSettings()->isEmpty())
                                 {
-                                    QMessageBox msg(QMessageBox::Question, "Підтвердження дії", "<p style='font-size:10pt'>Ви впевнені, що хочете змінити налаштування?<p>", QMessageBox::Yes | QMessageBox::No);
-                                    msg.setButtonText(QMessageBox::Yes, "Так");
-                                    msg.setButtonText(QMessageBox::No, "Ні");
+                                    QMessageBox msg(QMessageBox::Question, tr("Підтвердження дії"), tr("<p style='font-size:10pt'>Ви впевнені, що хочете змінити налаштування?<p>"), QMessageBox::Yes | QMessageBox::No);
+                                    msg.setButtonText(QMessageBox::Yes, tr("Так"));
+                                    msg.setButtonText(QMessageBox::No, tr("Ні"));
                                     if(msg.exec() == QMessageBox::Yes)
                                     {
                                         if(static_cast<Qt::CheckState>(KeyBoardHooker::getSettings()->value("autorun")) == Qt::Checked &&
@@ -293,7 +295,7 @@ void MainWindow::createConnect()
                                             {
                                                 if(i == 0 || i == VK_LMENU || i == VK_RMENU || i == VK_LCONTROL || i == VK_RCONTROL)
                                                 {
-                                                    QMessageBox::information(this, "Повідомлення", "<p style='font-size:10pt'>Ви не вказали клавішу або їх комбінацію, тому буде встановлено стандартну комбінацію <b>Ctrl + Alt + F7</b>. Комбінації <b>Ctrl + Alt</b>, <b>Ctrl + Ctrl</b>, <b>Alt + Alt</b> не можуть використовуватися.</p>");
+                                                    QMessageBox::information(this, tr("Повідомлення"), tr("<p style='font-size:10pt'>Ви не вказали клавішу або їх комбінацію, тому буде встановлено стандартну комбінацію <b>Ctrl + Alt + F7</b>. Комбінації <b>Ctrl + Alt</b>, <b>Ctrl + Ctrl</b>, <b>Alt + Alt</b> не можуть використовуватися.</p>"));
                                                     KeyBoardHooker::setTempSetting("Ctrl state", HOTKEYF_CONTROL);
                                                     KeyBoardHooker::setTempSetting("Alt state", HOTKEYF_ALT);
                                                     KeyBoardHooker::setTempSetting("another key state", 0x76);
@@ -301,7 +303,7 @@ void MainWindow::createConnect()
                                                 else if(KeyBoardHooker::getTempSettings()->value("Ctrl state") == 0 && KeyBoardHooker::getTempSettings()->value("Alt state") == 0 &&
                                                         (KeyBoardHooker::getTempSettings()->value("another key state") < VK_F1 || KeyBoardHooker::getTempSettings()->value("another key state") > VK_F12))
                                                 {
-                                                    QMessageBox::information(this, "Повідомлення", "<p style='font-size:10pt'>Обрана клавіша не належить до клавіш <b>F1-F12</b>, тому буде встановлено стандартну комбінацію <b>Ctrl + Alt + F7</b>. Обрану клавішу можна використати тільки у комбінації з <b>Ctrl</b>, або з <b>Alt</b>, або з <b>Ctrl + Alt</b>.</p>");
+                                                    QMessageBox::information(this, tr("Повідомлення"), tr("<p style='font-size:10pt'>Обрана клавіша не належить до клавіш <b>F1-F12</b>, тому буде встановлено стандартну комбінацію <b>Ctrl + Alt + F7</b>. Обрану клавішу можна використати тільки у комбінації з <b>Ctrl</b>, або з <b>Alt</b>, або з <b>Ctrl + Alt</b>.</p>"));
                                                     KeyBoardHooker::setTempSetting("Ctrl state", HOTKEYF_CONTROL);
                                                     KeyBoardHooker::setTempSetting("Alt state", HOTKEYF_ALT);
                                                     KeyBoardHooker::setTempSetting("another key state", 0x76);
@@ -309,7 +311,7 @@ void MainWindow::createConnect()
                                                 else if(KeyBoardHooker::getTempSettings()->value("Ctrl state") == HOTKEYF_CONTROL && KeyBoardHooker::getTempSettings()->value("Alt state") == 0 &&
                                                         KeyBoardHooker::getTempSettings()->value("another key state") == VK_F11)
                                                 {
-                                                    QMessageBox::information(this, "Повідомлення", "<p style='font-size:10pt'>Комбінація <b>Ctrl + F11</b> слугує для відкриття вікна програми, коли програма схована в трей. Будь ласка, оберіть нову комбінацію. Поки буде встановлено стандартну комбінацію <b>Ctrl + Alt + F7</b>.</p>");
+                                                    QMessageBox::information(this, tr("Повідомлення"), tr("<p style='font-size:10pt'>Комбінація <b>Ctrl + F11</b> слугує для відкриття вікна програми, коли програма схована в трей. Будь ласка, оберіть нову комбінацію. Поки буде встановлено стандартну комбінацію <b>Ctrl + Alt + F7</b>.</p>"));
                                                     KeyBoardHooker::setTempSetting("Ctrl state", HOTKEYF_CONTROL);
                                                     KeyBoardHooker::setTempSetting("Alt state", HOTKEYF_ALT);
                                                     KeyBoardHooker::setTempSetting("another key state", 0x76);
@@ -317,7 +319,7 @@ void MainWindow::createConnect()
                                                 WORD wHotKey = MAKEWORD(KeyBoardHooker::getTempSettings()->value("another key state"), KeyBoardHooker::getTempSettings()->value("Ctrl state") | KeyBoardHooker::getTempSettings()->value("Alt state"));
                                                 this->changeLnk(wHotKey);
                                                 ui->lineEditStarKey->setText( getHotKeyCombinationString(KeyBoardHooker::getTempSettings()) );
-                                                QMessageBox::information(this, "Повідомлення", "<p style='font-size:10pt'>Якщо після закриття програми ви не зможете запустити її за допомогою обраної клавіші або комбінації, будь ласка, перезавантажте систему. Ця проблема може виникнути тільки в тому ж сеансі роботи з ПК, під час якого було змінено \"гарячу клавішу\" або комбінацію.</p><p style='font-size:10pt'>Також можливо, що обрана клавіша / комбінація зайнята іншою програмою.</p>");
+                                                QMessageBox::information(this, tr("Повідомлення"), tr("<p style='font-size:10pt'>Якщо після закриття програми ви не зможете запустити її за допомогою обраної клавіші або комбінації, будь ласка, перезавантажте систему. Ця проблема може виникнути тільки в тому ж сеансі роботи з ПК, під час якого було змінено \"гарячу клавішу\" або комбінацію.</p><p style='font-size:10pt'>Також можливо, що обрана клавіша / комбінація зайнята іншою програмою.</p>"));
                                             }
                                             else
                                             {
@@ -348,9 +350,9 @@ void MainWindow::createConnect()
                                 }
     });
     connect(this->ui->pushButtonStandart, &QPushButton::pressed, [this] () {
-                                    QMessageBox msg(QMessageBox::Question, "Підтвердження дії", "<p style='font-size:10pt'>Ви впевнені, що хочете встановити стандартні налаштування?</p>", QMessageBox::Yes | QMessageBox::No);
-                                    msg.setButtonText(QMessageBox::Yes, "Так");
-                                    msg.setButtonText(QMessageBox::No, "Ні");
+                                    QMessageBox msg(QMessageBox::Question, tr("Підтвердження дії"), tr("<p style='font-size:10pt'>Ви впевнені, що хочете встановити стандартні налаштування?</p>"), QMessageBox::Yes | QMessageBox::No);
+                                    msg.setButtonText(QMessageBox::Yes, tr("Так"));
+                                    msg.setButtonText(QMessageBox::No, tr("Ні"));
                                     if(msg.exec() == QMessageBox::Yes)
                                     {
                                         if(static_cast<Qt::CheckState>(KeyBoardHooker::getSettings()->value("autorun")) == Qt::Unchecked)
@@ -362,12 +364,53 @@ void MainWindow::createConnect()
                                             #endif
                                         }
                                         KeyBoardHooker::getTempSettings()->clear();
-                                        KeyBoardHooker::configureSettings(0);
+                                        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+                                        KeyBoardHooker::configureSettings(new QVector<int>(QVector<int>::fromStdVector(errors)));
                                         this->displaySettings(KeyBoardHooker::getSettings());
                                         QDir::setCurrent(QApplication::applicationDirPath());
                                         QFile("settings.json").remove();
                                     }
     });
+    connect(this->ui->pushButtonDelUR, &QPushButton::pressed, [this] () {
+                                    KeyBoardHooker::setTempSetting("top-right", 0);
+                                    ui->lineEditUpRight->setText("");
+                                    this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->pushButtonDelUR->setEnabled(false);
+    });
+    connect(this->ui->pushButtonDelUL, &QPushButton::pressed, [this] () {
+                                    KeyBoardHooker::setTempSetting("top-left", 0);
+                                    ui->lineEditUpLeft->setText("");
+                                    this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->pushButtonDelUL->setEnabled(false);
+    });
+    connect(this->ui->pushButtonDelDR, &QPushButton::pressed, [this] () {
+                                    KeyBoardHooker::setTempSetting("down-right", 0);
+                                    ui->lineEditDownRight->setText("");
+                                    this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->pushButtonDelDR->setEnabled(false);
+    });
+    connect(this->ui->pushButtonDelDL, &QPushButton::pressed, [this] () {
+                                    KeyBoardHooker::setTempSetting("down-left", 0);
+                                    ui->lineEditDownLeft->setText("");
+                                    this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->pushButtonDelDL->setEnabled(false);
+    });
+    connect(this->ui->pushButtonDelWU, &QPushButton::pressed, [this] () {
+                                    KeyBoardHooker::setTempSetting("wheel up", 0);
+                                    ui->lineEditWheelUp->setText("");
+                                    this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->pushButtonDelWU->setEnabled(false);
+    });
+    connect(this->ui->pushButtonDelWD, &QPushButton::pressed, [this] () {
+                                    KeyBoardHooker::setTempSetting("wheel down", 0);
+                                    ui->lineEditWheelDown->setText("");
+                                    this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->pushButtonDelWD->setEnabled(false);
+    });
+}
+
+void MainWindow::createConnectCheckBoxes()
+{
     connect(this->ui->checkBoxAutoStart, &QCheckBox::stateChanged, [this] (int state) {
                                         KeyBoardHooker::setTempSetting("autorun", static_cast<unsigned int>(state));
                                         this->ui->pushButtonCancel->setEnabled(true);
@@ -385,14 +428,72 @@ void MainWindow::createConnect()
     });
 }
 
-void MainWindow::createMenuBar()
+void MainWindow::createConnectLineEdits()
 {
-    ui->menuBar->addAction("Вийти", qApp, &QCoreApplication::quit);
-    ui->menuBar->addSeparator();
-    ui->menuBar->addAction("Про програму", [this]
+    connect(this->ui->lineEditUpRight, &QLineEdit::textChanged, [this] (QString str) {
+                                        this->ui->pushButtonDelUR->setEnabled(!str.isEmpty());
+    });
+    connect(this->ui->lineEditUpLeft, &QLineEdit::textChanged, [this] (QString str) {
+                                        this->ui->pushButtonDelUL->setEnabled(!str.isEmpty());
+    });
+    connect(this->ui->lineEditDownRight, &QLineEdit::textChanged, [this] (QString str) {
+                                        this->ui->pushButtonDelDR->setEnabled(!str.isEmpty());
+    });
+    connect(this->ui->lineEditDownLeft, &QLineEdit::textChanged, [this] (QString str) {
+                                        this->ui->pushButtonDelDL->setEnabled(!str.isEmpty());
+    });
+    connect(this->ui->lineEditWheelUp, &QLineEdit::textChanged, [this] (QString str) {
+                                        this->ui->pushButtonDelWU->setEnabled(!str.isEmpty());
+    });
+    connect(this->ui->lineEditWheelDown, &QLineEdit::textChanged, [this] (QString str) {
+                                        this->ui->pushButtonDelWD->setEnabled(!str.isEmpty());
+    });
+}
+
+void MainWindow::createConnectSliders()
+{
+    connect(this->ui->sliderSpeedX, &QSlider::valueChanged, [this] (int value) {
+                                this->ui->spinBoxSpeedX->setValue(value);
+                                KeyBoardHooker::setTempSetting("speed x", static_cast<unsigned int>(value));
+                                this->ui->pushButtonCancel->setEnabled(true);
+    });
+    connect(this->ui->sliderSpeedY, &QSlider::valueChanged, [this] (int value) {
+                                this->ui->spinBoxSpeedY->setValue(value);
+                                KeyBoardHooker::setTempSetting("speed y", static_cast<unsigned int>(value));
+                                this->ui->pushButtonCancel->setEnabled(true);
+    });
+    connect(this->ui->sliderSpeedWheel, &QSlider::valueChanged, [this] (int value) {
+                                this->ui->spinBoxSpeedWheel->setValue(value);
+                                KeyBoardHooker::setTempSetting("speed wheel", static_cast<unsigned int>(value));
+                                this->ui->pushButtonCancel->setEnabled(true);
+    });
+}
+
+void MainWindow::createConnectSpinBoxes()
+{
+    connect(this->ui->spinBoxSpeedX, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this] (int value) {
+                                this->ui->sliderSpeedX->setValue(value);
+                                KeyBoardHooker::setTempSetting("speed x", static_cast<unsigned int>(value));
+                                this->ui->pushButtonCancel->setEnabled(true);
+    });
+    connect(this->ui->spinBoxSpeedY, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this] (int value) {
+                                this->ui->sliderSpeedY->setValue(value);
+                                KeyBoardHooker::setTempSetting("speed y", static_cast<unsigned int>(value));
+                                this->ui->pushButtonCancel->setEnabled(true);
+    });
+    connect(this->ui->spinBoxSpeedWheel, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this] (int value) {
+                                this->ui->sliderSpeedWheel->setValue(value);
+                                KeyBoardHooker::setTempSetting("speed wheel", static_cast<unsigned int>(value));
+                                this->ui->pushButtonCancel->setEnabled(true);
+    });
+}
+
+void MainWindow::createMenuBar()
+{    
+    ui->menuBar->addAction(tr("Про програму"), [this]
                             {
-                                QMessageBox::information(this, "Про програму",
-                                    "<div style='font-size:10pt'><p><b><u>Розробник:</u></b> Яремченко Євгеній.</p>"
+                                QMessageBox::information(this, tr("Про програму"),
+                                    tr("<div style='font-size:10pt'><p><b><u>Розробник:</u></b> Яремченко Євгеній.</p>"
                                     "<p><b><u>Контакти:</u></b> kpyto2012@gmail.com.</p>"
                                     "<p><b><u>Про програму.</u></b></p>"
                                     "<p><b><u style='font-size:12pt'>1.</u></b> Програма дозволяє керувати мишею за допомогою клавіатури.</p>"
@@ -403,18 +504,20 @@ void MainWindow::createMenuBar()
                                     "<p><b><u style='font-size:12pt'>6.</u></b> Для закриття програми може бути використана комбінація <b>Ctrl+F12</b> або відповідний пункт головного меню чи меню, яке може бути викликане "
                                     "натисканням правої кнопки миші на значку програми в області повідомлень.</p>"
                                     "<p><b><u style='font-size:12pt'>7.</u></b> Для відкриття вікна програми може бути використана комбінація <b>Ctrl+F11</b> або відповідний пункт меню, яке може бути викликане "
-                                    "натисканням правої кнопки миші на значку програми в області повідомлень.</p></div>"
+                                    "натисканням правої кнопки миші на значку програми в області повідомлень.</p></div>")
                                 );
     });
+    ui->menuBar->addSeparator();
+    ui->menuBar->addAction(tr("Вийти"), qApp, &QCoreApplication::quit);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 { 
     if (!isAllowClose && trayIcon->isVisible()) {
-        QMessageBox::information(this, "Інформація",
-                                 "<p style='font-size:10pt'>Програма продовжить працювати після закриття цього вікна. "
+        QMessageBox::information(this, tr("Інформація"),
+                                 tr("<p style='font-size:10pt'>Програма продовжить працювати після закриття цього вікна. "
                                     "Для припинення її роботи у системному треї клацніть правою кнопкою миші "
-                                    "на значок програми і виберіть пункт <b>Вийти</b>.</p>");
+                                    "на значок програми і виберіть пункт <b>Вийти</b>.</p>"));
         hide();
         event->ignore();
     }
@@ -424,7 +527,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::initialiseTray()
 {
     trayIcon = new QSystemTrayIcon(QIcon(":/icon.ico"), this);
-    trayIcon->setToolTip("Відкрити вікно налаштувань програми");
+    trayIcon->setToolTip(tr("Відкрити вікно налаштувань програми"));
 
     trayMenu = new QMenu(this);
     trayMenu->addAction(openAction);
@@ -446,13 +549,13 @@ void MainWindow::initialiseTray()
 
 void MainWindow::createTrayActions()
 {
-    openAction = new QAction("Відкрити вікно налаштувань", this);
+    openAction = new QAction(tr("Відкрити вікно налаштувань"), this);
     openAction->setIcon(QIcon(":/open.png"));
     openAction->setShortcut(QKeySequence(tr("Ctrl+F11")));
     openAction->setShortcutVisibleInContextMenu(true);
     connect(openAction, &QAction::triggered, this, &QWidget::showNormal);
 
-    quitAction = new QAction("Вийти", this);
+    quitAction = new QAction(tr("Вийти"), this);
     quitAction->setIcon(QIcon(":/close.png"));
     quitAction->setShortcut(QKeySequence(tr("Ctrl+F12")));    
     quitAction->setShortcutVisibleInContextMenu(true);
