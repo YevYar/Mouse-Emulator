@@ -10,11 +10,13 @@
 #include <QDebug>
 #include <QDir>
 #include <QIcon>
+#include <QImage>
 #include <QMenu>
 #include <QMessageBox>
 #include <QProcessEnvironment>
 #include <QSettings>
 #include <QSystemTrayIcon>
+#include <QTranslator>
 
 QLineEdit * MainWindow::focusedLineEdit = nullptr;
 
@@ -32,7 +34,8 @@ MainWindow::MainWindow(QWidget *parent) :
     createTrayActions();
     initialiseTray();
     createMenuBar();
-    createConnect();
+    setCaptionsToSomeUiEl();
+    createConnects();
     installEventFilters();
 }
 
@@ -105,26 +108,30 @@ HRESULT MainWindow::changeLnk(WORD wHotKey)
         hRes = pSL->SetPath(QDir::toNativeSeparators(QApplication::applicationFilePath()).toStdWString().c_str());
         if( SUCCEEDED(hRes) )
         {
-            hRes = pSL->SetArguments(L"");
+            hRes = pSL->SetWorkingDirectory(QDir::toNativeSeparators(QApplication::applicationDirPath()).toStdWString().c_str());
             if( SUCCEEDED(hRes) )
             {
-                hRes = pSL->SetIconLocation(QDir::toNativeSeparators(QApplication::applicationFilePath()).toStdWString().c_str(), 0);
+                hRes = pSL->SetArguments(L"");
                 if( SUCCEEDED(hRes) )
                 {
-                    hRes = pSL->SetHotkey(wHotKey);
+                    hRes = pSL->SetIconLocation(QDir::toNativeSeparators(QApplication::applicationFilePath()).toStdWString().c_str(), 0);
                     if( SUCCEEDED(hRes) )
                     {
-                        hRes = pSL->SetShowCmd(SW_SHOWNORMAL);
+                        hRes = pSL->SetHotkey(wHotKey);
                         if( SUCCEEDED(hRes) )
                         {
-                            // Получение компонента хранилища параметров
-                            hRes = pSL->QueryInterface(IID_IPersistFile,reinterpret_cast<LPVOID *>(&pPF));
+                            hRes = pSL->SetShowCmd(SW_SHOWNORMAL);
                             if( SUCCEEDED(hRes) )
                             {
-                                // Сохранение созданного ярлыка
-                                QProcessEnvironment env(QProcessEnvironment::systemEnvironment());
-                                hRes = pPF->Save(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro.lnk").toStdWString().c_str(),TRUE);
-                                pPF->Release();
+                                // Получение компонента хранилища параметров
+                                hRes = pSL->QueryInterface(IID_IPersistFile,reinterpret_cast<LPVOID *>(&pPF));
+                                if( SUCCEEDED(hRes) )
+                                {
+                                    // Сохранение созданного ярлыка
+                                    QProcessEnvironment env(QProcessEnvironment::systemEnvironment());
+                                    hRes = pPF->Save(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro.lnk").toStdWString().c_str(),TRUE);
+                                    pPF->Release();
+                                }
                             }
                         }
                     }
@@ -225,6 +232,13 @@ void MainWindow::displaySettings(const QMap<QString, unsigned int> *settings)
         ui->lineEditStarKey->setText( getHotKeyCombinationString(settings) );
 
     this->ui->pushButtonCancel->setEnabled(false);
+
+    if(settings->value("language") == Ukrainian)
+    {
+        ukrainianAction->setDisabled(true);
+        ukrainianAction->setIcon(QIcon(QPixmap::fromImage(QImage(":images/ukraine.png").convertToFormat(QImage::Format_Grayscale8))));
+    }
+    else retranslateApp(static_cast<Language>(settings->value("language")));
 }
 
 void MainWindow::installEventFilters()
@@ -244,8 +258,41 @@ void MainWindow::installEventFilters()
     ui->lineEditWheelDown->installEventFilter(this);
 }
 
-void MainWindow::createConnect()
+void MainWindow::retranslateApp(Language language)
 {
+    qApp->removeTranslator(&translator);
+
+    switch(language)
+    {
+        case Ukrainian: translator.load("ukrainian", "translates"); break;
+        case English: translator.load("english", "translates"); break;
+        case Russian: translator.load("russian", "translates"); break;
+    }
+
+    qApp->installTranslator(&translator);
+    ui->retranslateUi(this);
+    this->setCaptionsToSomeUiEl();
+
+    ukrainianAction->setDisabled(language == Ukrainian);
+    ukrainianAction->setIcon(language == Ukrainian ? QIcon(QPixmap::fromImage(QImage(":images/ukraine.png").convertToFormat(QImage::Format_Grayscale8))) : QIcon(":images/ukraine.png"));
+    englishAction->setDisabled(language == English);
+    englishAction->setIcon(language == English ? QIcon(QPixmap::fromImage(QImage(":images/english.png").convertToFormat(QImage::Format_Grayscale8))) : QIcon(":images/english.png"));
+    russianAction->setDisabled(language == Russian);
+    russianAction->setIcon(language == Russian ? QIcon(QPixmap::fromImage(QImage(":images/russia.png").convertToFormat(QImage::Format_Grayscale8))) : QIcon(":images/russia.png"));
+    /*foreach(auto i, ui->menuBar->actions())
+    {
+        qDebug() << "1_1";
+        i->setText(tr(i->text().toStdString().c_str()));
+        i->setIconText(tr(i->iconText().toStdString().c_str()));
+        i->setToolTip(tr(i->toolTip().toStdString().c_str()));
+        i->setWhatsThis(tr(i->whatsThis().toStdString().c_str()));
+        i->setStatusTip(tr(i->statusTip().toStdString().c_str()));
+    }*/
+}
+
+void MainWindow::createConnects()
+{
+    createConnectActions();
     createConnectSliders();
     createConnectSpinBoxes();
     createConnectLineEdits();
@@ -253,12 +300,37 @@ void MainWindow::createConnect()
     createConnectCheckBoxes();
 }
 
+void MainWindow::createConnectActions()
+{
+    connect(aboutAction, &QAction::triggered, [this] {
+                                QMessageBox::information(this, tr("Про програму"),
+                                    tr("<div style='font-size:10pt'><p><b><u>Розробник:</u></b> Яремченко Євгеній.</p>"
+                                    "<p><b><u>Контакти:</u></b> kpyto2012@gmail.com.</p>"
+                                    "<p><b><u>Про програму.</u></b></p>"
+                                    "<p><b><u style='font-size:12pt'>1.</u></b> Програма дозволяє керувати мишею за допомогою клавіатури.</p>"
+                                    "<p><b><u style='font-size:12pt'>2.</u></b> Програма може рухати курсор, емітувати натискання лівої та правої кнопок миші, рухати об'єкти, а також виконувати функції коліщатка.</p>"
+                                    "<p><b><u style='font-size:12pt'>3.</u></b> Програма дозволяє обирати клавіші для виконання вказаних раніше функції миші, а також налаштовувати швидкість руху курсору та коліщатка.</p>"
+                                    "<p><b><u style='font-size:12pt'>4.</u></b> Програма за бажанням може бути додана до автозапуску Windows.</p>"
+                                    "<p><b><u style='font-size:12pt'>5.</u></b> Програма може запускатися за допомогою натискання на клавіатурі обраної клавіші або їх комбінації.</p>"
+                                    "<p><b><u style='font-size:12pt'>6.</u></b> Для закриття програми може бути використана комбінація <b>Ctrl+F12</b> або відповідний пункт головного меню чи меню, яке може бути викликане "
+                                    "натисканням правої кнопки миші на значку програми в області повідомлень.</p>"
+                                    "<p><b><u style='font-size:12pt'>7.</u></b> Для відкриття вікна програми може бути використана комбінація <b>Ctrl+F11</b> або відповідний пункт меню, яке може бути викликане "
+                                    "натисканням правої кнопки миші на значку програми в області повідомлень.</p></div>")
+                                );
+    });
+    connect(openAction, &QAction::triggered, this, &QWidget::showNormal);
+    connect(quitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
+    connect(quitActionForMB, &QAction::triggered, qApp, &QCoreApplication::quit);
+
+    createConnectLanguages();
+}
+
 void MainWindow::createConnectButtons()
 {
     connect(this->ui->pushButtonOk, &QPushButton::pressed, [this] () {
                                 if( !KeyBoardHooker::getTempSettings()->isEmpty())
                                 {
-                                    QMessageBox msg(QMessageBox::Question, tr("Підтвердження дії"), tr("<p style='font-size:10pt'>Ви впевнені, що хочете змінити налаштування?<p>"), QMessageBox::Yes | QMessageBox::No);
+                                    QMessageBox msg(QMessageBox::Question, tr("Підтвердження дії"), tr("<p style='font-size:10pt'>Ви впевнені, що хочете змінити налаштування?<p>"), QMessageBox::Yes | QMessageBox::No, this);
                                     msg.setButtonText(QMessageBox::Yes, tr("Так"));
                                     msg.setButtonText(QMessageBox::No, tr("Ні"));
                                     if(msg.exec() == QMessageBox::Yes)
@@ -319,7 +391,7 @@ void MainWindow::createConnectButtons()
                                                 WORD wHotKey = MAKEWORD(KeyBoardHooker::getTempSettings()->value("another key state"), KeyBoardHooker::getTempSettings()->value("Ctrl state") | KeyBoardHooker::getTempSettings()->value("Alt state"));
                                                 this->changeLnk(wHotKey);
                                                 ui->lineEditStarKey->setText( getHotKeyCombinationString(KeyBoardHooker::getTempSettings()) );
-                                                QMessageBox::information(this, tr("Повідомлення"), tr("<p style='font-size:10pt'>Якщо після закриття програми ви не зможете запустити її за допомогою обраної клавіші або комбінації, будь ласка, перезавантажте систему. Ця проблема може виникнути тільки в тому ж сеансі роботи з ПК, під час якого було змінено \"гарячу клавішу\" або комбінацію.</p><p style='font-size:10pt'>Також можливо, що обрана клавіша / комбінація зайнята іншою програмою.</p>"));
+                                                QMessageBox::information(this, tr("Повідомлення"), tr("<p style='font-size:10pt'>Якщо після закриття програми ви не зможете запустити її за допомогою обраної клавіші або комбінації, будь ласка, перезавантажте систему. Ця проблема може виникнути тільки в тому ж сеансі роботи з ПК, під час якого було змінено \"гарячу\" клавішу або комбінацію.</p><p style='font-size:10pt'>Також можливо, що обрана клавіша / комбінація зайнята іншою програмою.</p>"));
                                             }
                                             else
                                             {
@@ -350,7 +422,7 @@ void MainWindow::createConnectButtons()
                                 }
     });
     connect(this->ui->pushButtonStandart, &QPushButton::pressed, [this] () {
-                                    QMessageBox msg(QMessageBox::Question, tr("Підтвердження дії"), tr("<p style='font-size:10pt'>Ви впевнені, що хочете встановити стандартні налаштування?</p>"), QMessageBox::Yes | QMessageBox::No);
+                                    QMessageBox msg(QMessageBox::Question, tr("Підтвердження дії"), tr("<p style='font-size:10pt'>Ви впевнені, що хочете встановити стандартні налаштування?</p>"), QMessageBox::Yes | QMessageBox::No, this);
                                     msg.setButtonText(QMessageBox::Yes, tr("Так"));
                                     msg.setButtonText(QMessageBox::No, tr("Ні"));
                                     if(msg.exec() == QMessageBox::Yes)
@@ -364,11 +436,11 @@ void MainWindow::createConnectButtons()
                                             #endif
                                         }
                                         KeyBoardHooker::getTempSettings()->clear();
-                                        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+                                        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
                                         KeyBoardHooker::configureSettings(new QVector<int>(QVector<int>::fromStdVector(errors)));
+                                        this->retranslateApp(Ukrainian);
                                         this->displaySettings(KeyBoardHooker::getSettings());
-                                        QDir::setCurrent(QApplication::applicationDirPath());
-                                        QFile("settings.json").remove();
+                                        this->keeper->removeSettingsFile();
                                     }
     });
     connect(this->ui->pushButtonDelUR, &QPushButton::pressed, [this] () {
@@ -424,6 +496,25 @@ void MainWindow::createConnectCheckBoxes()
                                         KeyBoardHooker::setTempSetting("Ctrl state", 0);
                                         KeyBoardHooker::setTempSetting("Alt state", 0);
                                         KeyBoardHooker::setTempSetting("another key state", 0);
+                                        this->ui->pushButtonCancel->setEnabled(true);
+    });
+}
+
+void MainWindow::createConnectLanguages()
+{
+    connect(englishAction, &QAction::triggered, this, [this] {
+                                        this->retranslateApp(English);
+                                        KeyBoardHooker::setTempSetting("language", static_cast<unsigned int>(English));
+                                        this->ui->pushButtonCancel->setEnabled(true);
+    });
+    connect(russianAction, &QAction::triggered, this, [this] {
+                                        this->retranslateApp(Russian);
+                                        KeyBoardHooker::setTempSetting("language", static_cast<unsigned int>(Russian));
+                                        this->ui->pushButtonCancel->setEnabled(true);
+    });
+    connect(ukrainianAction, &QAction::triggered, this, [this] {
+                                        this->retranslateApp(Ukrainian);
+                                        KeyBoardHooker::setTempSetting("language", static_cast<unsigned int>(Ukrainian));
                                         this->ui->pushButtonCancel->setEnabled(true);
     });
 }
@@ -488,27 +579,51 @@ void MainWindow::createConnectSpinBoxes()
     });
 }
 
+void MainWindow::setCaptionsToSomeUiEl()
+{
+    trayIcon->setToolTip(tr("Відкрити вікно налаштувань програми"));
+
+    aboutAction->setText(tr("Про програму"));
+    openAction->setText(tr("Відкрити вікно налаштувань"));
+    quitAction->setText(tr("Вийти"));
+    quitActionForMB->setText(tr("Вийти"));
+
+    ukrainianAction->setIconText(tr("Використовувати українську мову"));
+    ukrainianAction->setToolTip(tr("Використовувати українську мову"));
+    ukrainianAction->setWhatsThis(tr("Використовувати українську мову"));
+    ukrainianAction->setStatusTip(tr("Використовувати українську мову"));
+
+    englishAction->setIconText(tr("Використовувати англійську мову"));
+    englishAction->setToolTip(tr("Використовувати англійську мову"));
+    englishAction->setWhatsThis(tr("Використовувати англійську мову"));
+    englishAction->setStatusTip(tr("Використовувати англійську мову"));
+
+    russianAction->setIconText(tr("Використовувати російську мову"));
+    russianAction->setToolTip(tr("Використовувати російську мову"));
+    russianAction->setWhatsThis(tr("Використовувати російську мову"));
+    russianAction->setStatusTip(tr("Використовувати російську мову"));
+}
+
 void MainWindow::createMenuBar()
 {    
-    ui->menuBar->addAction(tr("Про програму"), [this]
-                            {
-                                QMessageBox::information(this, tr("Про програму"),
-                                    tr("<div style='font-size:10pt'><p><b><u>Розробник:</u></b> Яремченко Євгеній.</p>"
-                                    "<p><b><u>Контакти:</u></b> kpyto2012@gmail.com.</p>"
-                                    "<p><b><u>Про програму.</u></b></p>"
-                                    "<p><b><u style='font-size:12pt'>1.</u></b> Програма дозволяє керувати мишею за допомогою клавіатури.</p>"
-                                    "<p><b><u style='font-size:12pt'>2.</u></b> Програма може рухати курсор та емітувати натискання лівої та правої кнопок миші.</p>"
-                                    "<p><b><u style='font-size:12pt'>3.</u></b> Програма дозволяє обирати клавіші для виконання вказаних раніше функції миші, а також налаштовувати швидкість руху курсору.</p>"
-                                    "<p><b><u style='font-size:12pt'>4.</u></b> Програма за бажанням може бути додана до автозапуску Windows.</p>"
-                                    "<p><b><u style='font-size:12pt'>5.</u></b> Програма може запускатися за допомогою натискання на клавіатурі обраної клавіші або їх комбінації.</p>"
-                                    "<p><b><u style='font-size:12pt'>6.</u></b> Для закриття програми може бути використана комбінація <b>Ctrl+F12</b> або відповідний пункт головного меню чи меню, яке може бути викликане "
-                                    "натисканням правої кнопки миші на значку програми в області повідомлень.</p>"
-                                    "<p><b><u style='font-size:12pt'>7.</u></b> Для відкриття вікна програми може бути використана комбінація <b>Ctrl+F11</b> або відповідний пункт меню, яке може бути викликане "
-                                    "натисканням правої кнопки миші на значку програми в області повідомлень.</p></div>")
-                                );
-    });
+    aboutAction = new QAction(this);
+    quitActionForMB = new QAction(this);
+
+    englishAction = new QAction(this);
+    englishAction->setIcon(QIcon(":images/english.png"));
+
+    ukrainianAction = new QAction(this);
+    ukrainianAction->setIcon(QIcon(":images/ukraine.png"));
+
+    russianAction = new QAction(this);
+    russianAction->setIcon(QIcon(":images/russia.png"));
+
+    ui->menuBar->addAction(aboutAction);
     ui->menuBar->addSeparator();
-    ui->menuBar->addAction(tr("Вийти"), qApp, &QCoreApplication::quit);
+    ui->menuBar->addAction(quitActionForMB /*tr("Вийти"), qApp, &QCoreApplication::quit*/);
+    ui->menuBar->addAction(englishAction);
+    ui->menuBar->addAction(ukrainianAction);
+    ui->menuBar->addAction(russianAction);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -526,8 +641,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::initialiseTray()
 {
-    trayIcon = new QSystemTrayIcon(QIcon(":/icon.ico"), this);
-    trayIcon->setToolTip(tr("Відкрити вікно налаштувань програми"));
+    trayIcon = new QSystemTrayIcon(QIcon(":images/icon.ico"), this);
 
     trayMenu = new QMenu(this);
     trayMenu->addAction(openAction);
@@ -549,15 +663,13 @@ void MainWindow::initialiseTray()
 
 void MainWindow::createTrayActions()
 {
-    openAction = new QAction(tr("Відкрити вікно налаштувань"), this);
-    openAction->setIcon(QIcon(":/open.png"));
+    openAction = new QAction(this);
+    openAction->setIcon(QIcon(":images/open.png"));
     openAction->setShortcut(QKeySequence(tr("Ctrl+F11")));
-    openAction->setShortcutVisibleInContextMenu(true);
-    connect(openAction, &QAction::triggered, this, &QWidget::showNormal);
+    openAction->setShortcutVisibleInContextMenu(true);   
 
-    quitAction = new QAction(tr("Вийти"), this);
-    quitAction->setIcon(QIcon(":/close.png"));
+    quitAction = new QAction(this);
+    quitAction->setIcon(QIcon(":images/close.png"));
     quitAction->setShortcut(QKeySequence(tr("Ctrl+F12")));    
     quitAction->setShortcutVisibleInContextMenu(true);
-    connect(quitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
 }

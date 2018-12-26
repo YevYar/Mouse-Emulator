@@ -1,10 +1,12 @@
 #include "keyboardhooker.h"
 #include "mainwindow.h"
+#include "translationinfo.h"
 #include "shlobj.h"
 #include <QApplication>
 #include <QDebug>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QTranslator>
 
 extern MainWindow *w;
 HHOOK KeyBoardHooker::keyboardHook;
@@ -63,7 +65,7 @@ QString KeyBoardHooker::getSettingNameByKeyName(QString keyName, bool settingMap
     while (i != settings.constEnd()) {
         if(i.key() != QString("speed x") && i.key() != QString("speed y") && i.key() != QString("speed wheel") && i.key() != QString("autorun") &&
                 i.key() != QString("hot key") && i.key() != QString("Ctrl state") && i.key() != QString("Alt state") &&
-                i.key() != QString("another key state") && getKeyNameByVirtualKey(i.value()) == keyName)
+                i.key() != QString("another key state") && i.key() != QString("language") && getKeyNameByVirtualKey(i.value()) == keyName)
             return i.key();
         ++i;
     }
@@ -115,6 +117,8 @@ void KeyBoardHooker::configureSettings(QVector<int> *errors)
         settings.insert("wheel up", 0x6b);
     if(errors->contains(19))
         settings.insert("wheel down", 0x6d);
+    if(errors->contains(20))
+        settings.insert("language", Ukrainian);
 }
 
 void KeyBoardHooker::setNewKeyValue(QString key, unsigned int value)
@@ -249,23 +253,33 @@ LRESULT CALLBACK KeyBoardHooker::keyboardHookProc(int nCode, WPARAM wParam, LPAR
                 }
                 tempSettings["another key state"] = p->vkCode;
                 hotKey += getKeyNameByVirtualKey(p->vkCode);
-
                  w->getFocusedLineEdit()->setText(hotKey);
-                 return 0;
             }
-
-            QString tmpKeyName = getKeyNameByVirtualKey(p->vkCode);
-            QString tmpSettingName0 = getSettingNameByKeyName( w->getFocusedLineEdit()->text());
-            QString tmpSettingName1 = getSettingNameByKeyName( w->getFocusedLineEdit()->text(), 1);
-            if(tmpKeyName == w->getFocusedLineEdit()->text())
-                return 0;            
-            if( !tmpKeyName.isEmpty() && !isContainKey(p->vkCode, 1) && !isSM0ContainKeyWithoutCrossing(p->vkCode))
+            else
             {
-                setTempSetting(tmpSettingName1.isEmpty() ? tmpSettingName0 : tmpSettingName1, p->vkCode);
-                w->getFocusedLineEdit()->setText(tmpKeyName);
-                return 0;
+                QString tmpKeyName = getKeyNameByVirtualKey(p->vkCode);
+                QString tmpSettingName0 = getSettingNameByKeyName( w->getFocusedLineEdit()->text());
+                QString tmpSettingName1 = getSettingNameByKeyName( w->getFocusedLineEdit()->text(), 1);
+                if(tmpKeyName == w->getFocusedLineEdit()->text())
+                {
+                    //return 0;
+                }
+                else if( !tmpKeyName.isEmpty() && !isContainKey(p->vkCode, 1) && !isSM0ContainKeyWithoutCrossing(p->vkCode))
+                {
+                    setTempSetting(tmpSettingName1.isEmpty() ? tmpSettingName0 : tmpSettingName1, p->vkCode);
+                    w->getFocusedLineEdit()->setText(tmpKeyName);
+                    return 0;
+                }
+                else
+                {
+                    w->getFocusedLineEdit()->clearFocus();
+                    QMessageBox *msg = new QMessageBox(QMessageBox::Warning, tr("Увага"), tr("<p style='font-size:12pt'>Обрана клавіша вже використовується.</p>"), QMessageBox::Ok);
+                    connect(msg, &QMessageBox::finished, msg, &QMessageBox::deleteLater);
+                    msg->open();
+                    //delete msg;
+                    //::warning(w, tr("Увага"), tr("<p style='font-size:12pt'>Обрана клавіша вже використовується.</p>"));
+                }
             }
-            else QMessageBox::warning(w, tr("Увага"), tr("<p style='font-size:12pt'>Обрана клавіша вже використовується.</p>"));
         }
 
         POINT currentPos;

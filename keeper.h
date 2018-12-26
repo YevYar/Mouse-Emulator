@@ -20,6 +20,7 @@ public:
     Keeper(QObject *parent = nullptr);
     QVector<int> *loadSettings(QMap<QString, unsigned int> &settings);
     int saveSettings(const QMap<QString, unsigned int> &settings);
+    void removeSettingsFile();
 
 };
 

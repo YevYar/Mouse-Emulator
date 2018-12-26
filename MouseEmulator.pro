@@ -31,7 +31,8 @@ SOURCES += \
 HEADERS += \
         mainwindow.h \
     keeper.h \
-    keyboardhooker.h
+    keyboardhooker.h \
+    translationinfo.h
 
 FORMS += \
         mainwindow.ui
@@ -44,6 +45,10 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 RESOURCES += \
     resources.qrc
 
-RC_ICONS = icon.ico
+TRANSLATIONS    = translates/ukrainian.ts \
+                  translates/russian.ts \
+                  translates/english.ts
+
+RC_ICONS = images/icon.ico
 
 LIBS += -lole32 -luuid

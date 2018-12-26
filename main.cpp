@@ -1,5 +1,6 @@
 #include "keyboardhooker.h"
 #include "mainwindow.h"
+#include "translationinfo.h"
 #include "shlobj.h"
 #include "windows.h"
 #include <QApplication>
@@ -12,6 +13,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     QApplication::setQuitOnLastWindowClosed(false);
+
     w = new MainWindow();
     QObject::connect(qApp, &QCoreApplication::aboutToQuit, w, [] () {w->allowClose(true); w->close(); delete w;});
     w->show();

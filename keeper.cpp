@@ -1,4 +1,5 @@
 #include "keeper.h"
+#include "translationinfo.h"
 #include <QApplication>
 #include <QFile>
 #include <QDir>
@@ -38,12 +39,13 @@ int Keeper::saveSettings(const QMap<QString, unsigned int> &settings)
     obj.insert("speed wheel", static_cast<int>(settings["speed wheel"]));
     obj.insert("wheel up", static_cast<int>(settings["wheel up"]));
     obj.insert("wheel down", static_cast<int>(settings["wheel down"]));
+    obj.insert("language", static_cast<Language>(settings["language"]));
 
     QJsonDocument jsonDoc;
     jsonDoc.setObject(obj);
 
     QFile file;
-    QDir::setCurrent(QApplication::applicationDirPath());
+    //QDir::setCurrent(QApplication::applicationDirPath());
     file.setFileName("settings.json");
 
     try
@@ -63,10 +65,16 @@ int Keeper::saveSettings(const QMap<QString, unsigned int> &settings)
     return 100;
 }
 
+void Keeper::removeSettingsFile()
+{
+    //QDir::setCurrent(QApplication::applicationDirPath());
+    QFile("settings.json").remove();
+}
+
 QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
 {
     QFile file;
-    QDir::setCurrent(QApplication::applicationDirPath());
+    //QDir::setCurrent(QApplication::applicationDirPath());
     file.setFileName("settings.json");
 
     try
@@ -76,7 +84,7 @@ QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
     }
     catch(int key)
     {
-        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
         return new QVector<int>(QVector<int>::fromStdVector(errors)); // ошибка: нет файла
     }
 
@@ -86,7 +94,7 @@ QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
 
     if(jsonDoc.isEmpty() || jsonDoc.isNull() || jsonDoc.object().isEmpty())
     {
-        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+        std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
         return new QVector<int>(QVector<int>::fromStdVector(errors)); // файл пуст или не содержит корректные настройки
     }
 
@@ -171,6 +179,10 @@ QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
     if(jsonDoc.object().value("wheel down") == QJsonValue::Undefined)
         errors->push_back(19);
     else settings.insert("wheel down", static_cast<const unsigned int>(jsonDoc.object().value("wheel down").toInt()));
+
+    if(jsonDoc.object().value("language") == QJsonValue::Undefined)
+        errors->push_back(20);
+    else settings.insert("language", static_cast<Language>(jsonDoc.object().value("language").toInt()));
 
     return errors;
 }

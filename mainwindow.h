@@ -6,6 +6,7 @@
  * В процессе сохранения настроек позволяет добавить (удалить) программу в атозапуск и создать ярлык с нужными горячими клавишами
  * ************************************/
 
+#include "translationinfo.h"
 #include <QMainWindow>
 using WORD = unsigned short;
 
@@ -24,8 +25,13 @@ class MainWindow : public QMainWindow
     bool itWasChanged; // указывает на то, были ли изменены настройки или нет
     bool isAllowClose;
     Keeper *keeper; // указатель на класс, который сохраняет и загружает настройки из файла
+    QAction *aboutAction;
+    QAction *englishAction;
     QAction *openAction;
     QAction *quitAction;
+    QAction *quitActionForMB; // MB - menu bar
+    QAction *russianAction;
+    QAction *ukrainianAction;
     QMenu *trayMenu;
     QSystemTrayIcon *trayIcon;
     static QLineEdit * focusedLineEdit;
@@ -52,9 +58,11 @@ public:
 
 private:
     Ui::MainWindow *ui;
-    void createConnect();
+    void createConnects();
+    void createConnectActions();
     void createConnectButtons();
     void createConnectCheckBoxes();
+    void createConnectLanguages();
     void createConnectLineEdits();
     void createConnectSliders();
     void createConnectSpinBoxes();
@@ -62,6 +70,8 @@ private:
     void createTrayActions();
     void initialiseTray();
     void installEventFilters();
+    void retranslateApp(Language);
+    void setCaptionsToSomeUiEl();
 
 };
 
