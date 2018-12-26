@@ -45,7 +45,6 @@ int Keeper::saveSettings(const QMap<QString, unsigned int> &settings)
     jsonDoc.setObject(obj);
 
     QFile file;
-    //QDir::setCurrent(QApplication::applicationDirPath());
     file.setFileName("settings.json");
 
     try
@@ -67,14 +66,12 @@ int Keeper::saveSettings(const QMap<QString, unsigned int> &settings)
 
 void Keeper::removeSettingsFile()
 {
-    //QDir::setCurrent(QApplication::applicationDirPath());
     QFile("settings.json").remove();
 }
 
 QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
 {
     QFile file;
-    //QDir::setCurrent(QApplication::applicationDirPath());
     file.setFileName("settings.json");
 
     try

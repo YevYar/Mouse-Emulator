@@ -161,6 +161,15 @@ QLineEdit *MainWindow::getFocusedLineEdit()
     return focusedLineEdit;
 }
 
+void MainWindow::addToAutorun()
+{
+    #ifdef Q_OS_WIN32
+        QSettings settings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
+        settings.setValue("Mouse Emulator Pro", QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));
+        settings.sync();
+    #endif
+}
+
 void MainWindow::allowClose(bool value)
 {
     isAllowClose = value;
@@ -279,15 +288,6 @@ void MainWindow::retranslateApp(Language language)
     englishAction->setIcon(language == English ? QIcon(QPixmap::fromImage(QImage(":images/english.png").convertToFormat(QImage::Format_Grayscale8))) : QIcon(":images/english.png"));
     russianAction->setDisabled(language == Russian);
     russianAction->setIcon(language == Russian ? QIcon(QPixmap::fromImage(QImage(":images/russia.png").convertToFormat(QImage::Format_Grayscale8))) : QIcon(":images/russia.png"));
-    /*foreach(auto i, ui->menuBar->actions())
-    {
-        qDebug() << "1_1";
-        i->setText(tr(i->text().toStdString().c_str()));
-        i->setIconText(tr(i->iconText().toStdString().c_str()));
-        i->setToolTip(tr(i->toolTip().toStdString().c_str()));
-        i->setWhatsThis(tr(i->whatsThis().toStdString().c_str()));
-        i->setStatusTip(tr(i->statusTip().toStdString().c_str()));
-    }*/
 }
 
 void MainWindow::createConnects()
@@ -346,11 +346,7 @@ void MainWindow::createConnectButtons()
                                         if(static_cast<Qt::CheckState>(KeyBoardHooker::getSettings()->value("autorun")) == Qt::Unchecked &&
                                                 this->ui->checkBoxAutoStart->checkState() == Qt::Checked)
                                         {
-                                            #ifdef Q_OS_WIN32
-                                                QSettings settings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
-                                                settings.setValue("Mouse Emulator Pro", QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));
-                                                settings.sync();
-                                            #endif
+                                            this->addToAutorun();
                                         }
 
                                         if(static_cast<Qt::CheckState>(KeyBoardHooker::getSettings()->value("hot key")) == Qt::Checked &&
@@ -429,11 +425,7 @@ void MainWindow::createConnectButtons()
                                     {
                                         if(static_cast<Qt::CheckState>(KeyBoardHooker::getSettings()->value("autorun")) == Qt::Unchecked)
                                         {
-                                            #ifdef Q_OS_WIN32
-                                                QSettings settings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
-                                                settings.setValue("Mouse Emulator Pro", QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));
-                                                settings.sync();
-                                            #endif
+                                            this->addToAutorun();
                                         }
                                         KeyBoardHooker::getTempSettings()->clear();
                                         std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
@@ -620,7 +612,7 @@ void MainWindow::createMenuBar()
 
     ui->menuBar->addAction(aboutAction);
     ui->menuBar->addSeparator();
-    ui->menuBar->addAction(quitActionForMB /*tr("Вийти"), qApp, &QCoreApplication::quit*/);
+    ui->menuBar->addAction(quitActionForMB);
     ui->menuBar->addAction(englishAction);
     ui->menuBar->addAction(ukrainianAction);
     ui->menuBar->addAction(russianAction);

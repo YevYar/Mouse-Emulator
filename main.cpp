@@ -29,11 +29,7 @@ int main(int argc, char *argv[])
     QSettings qs;
     if(qs.value("Mouse Emulator Pro", -2).toInt() == -2 && static_cast<Qt::CheckState>(KeyBoardHooker::getSettings()->value("autorun")) == Qt::Checked)
     {
-        #ifdef Q_OS_WIN32
-            QSettings settings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
-            settings.setValue("Mouse Emulator Pro", QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));
-            settings.sync();
-        #endif
+        w->addToAutorun();
     }
 
     // создание ярлыка программы в небходимой папке происходит каждый раз при запуске программы с указанными клавишами или без, если данная настройка отключена

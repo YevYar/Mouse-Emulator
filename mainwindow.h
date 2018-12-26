@@ -53,6 +53,7 @@ public:
     HRESULT changeLnk(WORD); // создает ярлык с заданными настройками  в папке <USERPROFILE>/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/
     QString getHotKeyCombinationString(const QMap<QString, unsigned int> *settings); // генерирует строку с именами клавиш, входящих в комбинацию для запуска
     static QLineEdit *getFocusedLineEdit();
+    void addToAutorun();
     void allowClose(bool);
     void displaySettings(const QMap<QString, unsigned int> *settings); // зполняет необходимые виджеты формы нужными данными, полученными от KeyBoardHooker
 
