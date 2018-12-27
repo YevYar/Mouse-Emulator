@@ -14,7 +14,6 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QProcessEnvironment>
-#include <QSettings>
 #include <QSystemTrayIcon>
 #include <QTranslator>
 
@@ -79,73 +78,6 @@ int MainWindow::save(const QMap<QString, unsigned int> *settings)
     return this->keeper->saveSettings(*settings);
 }
 
-HRESULT MainWindow::changeLnk(WORD wHotKey)
-{
-    HRESULT hRes = 0;
-#ifdef Q_OS_WIN32
-
-    // Создание ярлыка
-    // Входные параметры:
-    //  pwzShortCutFileName - путь и имя ярлыка, например, "C:\\Блокнот.lnk"
-    //  Если не указан путь, ярлык будет создан в папке, указанной в следующем параметре.
-    //  Прим.: Windows сама НЕ добавляет к имени расширение .lnk
-    //  pszPathAndFileName  - путь и имя exe-файла, например, "C:\\Windows\\NotePad.Exe"
-    //  pszWorkingDirectory - рабочий каталог, например, "C:\\Windows"
-    //  pszArguments        - аргументы командной строки, например, "C:\\Doc\\Text.Txt"
-    //  wHotKey             - горячая клавиша, например, для Ctrl+Alt+A     HOTKEY(HOTKEYF_ALT|HOTKEYF_CONTROL,'A')
-    //  iCmdShow            - начальный вид, например, SW_SHOWNORMAL
-    //  pszIconFileName     - путь и имя файла, содержащего иконку, например, "C:\\Windows\\NotePad.Exe"
-    //  int iIconIndex      - индекс иконки в файле, нумеруется с 0
-
-    CoInitialize(nullptr);
-    IShellLink * pSL;
-    IPersistFile * pPF;
-
-    // Получение экземпляра компонента "Ярлык"
-    hRes = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLink, reinterpret_cast<LPVOID *>(&pSL));
-    if( SUCCEEDED(hRes) )
-    {
-        hRes = pSL->SetPath(QDir::toNativeSeparators(QApplication::applicationFilePath()).toStdWString().c_str());
-        if( SUCCEEDED(hRes) )
-        {
-            hRes = pSL->SetWorkingDirectory(QDir::toNativeSeparators(QApplication::applicationDirPath()).toStdWString().c_str());
-            if( SUCCEEDED(hRes) )
-            {
-                hRes = pSL->SetArguments(L"");
-                if( SUCCEEDED(hRes) )
-                {
-                    hRes = pSL->SetIconLocation(QDir::toNativeSeparators(QApplication::applicationFilePath()).toStdWString().c_str(), 0);
-                    if( SUCCEEDED(hRes) )
-                    {
-                        hRes = pSL->SetHotkey(wHotKey);
-                        if( SUCCEEDED(hRes) )
-                        {
-                            hRes = pSL->SetShowCmd(SW_SHOWNORMAL);
-                            if( SUCCEEDED(hRes) )
-                            {
-                                // Получение компонента хранилища параметров
-                                hRes = pSL->QueryInterface(IID_IPersistFile,reinterpret_cast<LPVOID *>(&pPF));
-                                if( SUCCEEDED(hRes) )
-                                {
-                                    // Сохранение созданного ярлыка
-                                    QProcessEnvironment env(QProcessEnvironment::systemEnvironment());
-                                    hRes = pPF->Save(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro.lnk").toStdWString().c_str(),TRUE);
-                                    pPF->Release();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        pSL->Release();
-    }
-    CoUninitialize();
-
-#endif
-    return hRes;
-}
-
 QString MainWindow::getHotKeyCombinationString(const QMap<QString, unsigned int> *settings)
 {
     QString tmp = "";
@@ -159,15 +91,6 @@ QString MainWindow::getHotKeyCombinationString(const QMap<QString, unsigned int>
 QLineEdit *MainWindow::getFocusedLineEdit()
 {
     return focusedLineEdit;
-}
-
-void MainWindow::addToAutorun()
-{
-    #ifdef Q_OS_WIN32
-        QSettings settings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
-        settings.setValue("Mouse Emulator Pro", QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));
-        settings.sync();
-    #endif
 }
 
 void MainWindow::allowClose(bool value)
@@ -338,22 +261,17 @@ void MainWindow::createConnectButtons()
                                         if(static_cast<Qt::CheckState>(KeyBoardHooker::getSettings()->value("autorun")) == Qt::Checked &&
                                                 this->ui->checkBoxAutoStart->checkState() == Qt::Unchecked)
                                         {
-                                            #ifdef Q_OS_WIN32
-                                                QSettings settings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
-                                                settings.remove("Mouse Emulator Pro");
-                                            #endif
+                                            Keeper::removeFromAutorun();
                                         }
                                         if(static_cast<Qt::CheckState>(KeyBoardHooker::getSettings()->value("autorun")) == Qt::Unchecked &&
                                                 this->ui->checkBoxAutoStart->checkState() == Qt::Checked)
-                                        {
-                                            this->addToAutorun();
-                                        }
+                                            Keeper::addToAutorun();
 
                                         if(static_cast<Qt::CheckState>(KeyBoardHooker::getSettings()->value("hot key")) == Qt::Checked &&
                                                 this->ui->checkBoxStartKey->checkState() == Qt::Unchecked)
                                         {
                                             WORD wHotKey = MAKEWORD(0, 0);
-                                            this->changeLnk(wHotKey);
+                                            Keeper::changeLnk(wHotKey);
                                             ui->lineEditStarKey->setText("");
                                         }
                                         else
@@ -385,7 +303,7 @@ void MainWindow::createConnectButtons()
                                                     KeyBoardHooker::setTempSetting("another key state", 0x76);
                                                 }
                                                 WORD wHotKey = MAKEWORD(KeyBoardHooker::getTempSettings()->value("another key state"), KeyBoardHooker::getTempSettings()->value("Ctrl state") | KeyBoardHooker::getTempSettings()->value("Alt state"));
-                                                this->changeLnk(wHotKey);
+                                                Keeper::changeLnk(wHotKey);
                                                 ui->lineEditStarKey->setText( getHotKeyCombinationString(KeyBoardHooker::getTempSettings()) );
                                                 QMessageBox::information(this, tr("Повідомлення"), tr("<p style='font-size:10pt'>Якщо після закриття програми ви не зможете запустити її за допомогою обраної клавіші або комбінації, будь ласка, перезавантажте систему. Ця проблема може виникнути тільки в тому ж сеансі роботи з ПК, під час якого було змінено \"гарячу\" клавішу або комбінацію.</p><p style='font-size:10pt'>Також можливо, що обрана клавіша / комбінація зайнята іншою програмою.</p>"));
                                             }
@@ -411,11 +329,11 @@ void MainWindow::createConnectButtons()
                                 }
     });
     connect(this->ui->pushButtonCancel, &QPushButton::pressed, [this] () {
-                                if( !KeyBoardHooker::getTempSettings()->isEmpty())
-                                {
-                                    KeyBoardHooker::getTempSettings()->clear();
-                                    this->displaySettings(KeyBoardHooker::getSettings());
-                                }
+                                    if( !KeyBoardHooker::getTempSettings()->isEmpty())
+                                    {
+                                        KeyBoardHooker::getTempSettings()->clear();
+                                        this->displaySettings(KeyBoardHooker::getSettings());
+                                    }
     });
     connect(this->ui->pushButtonStandart, &QPushButton::pressed, [this] () {
                                     QMessageBox msg(QMessageBox::Question, tr("Підтвердження дії"), tr("<p style='font-size:10pt'>Ви впевнені, що хочете встановити стандартні налаштування?</p>"), QMessageBox::Yes | QMessageBox::No, this);
@@ -424,15 +342,16 @@ void MainWindow::createConnectButtons()
                                     if(msg.exec() == QMessageBox::Yes)
                                     {
                                         if(static_cast<Qt::CheckState>(KeyBoardHooker::getSettings()->value("autorun")) == Qt::Unchecked)
-                                        {
-                                            this->addToAutorun();
-                                        }
+                                            Keeper::addToAutorun();
+
                                         KeyBoardHooker::getTempSettings()->clear();
                                         std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
                                         KeyBoardHooker::configureSettings(new QVector<int>(QVector<int>::fromStdVector(errors)));
                                         this->retranslateApp(Ukrainian);
                                         this->displaySettings(KeyBoardHooker::getSettings());
                                         this->keeper->removeSettingsFile();
+                                        WORD wHotKey = MAKEWORD(KeyBoardHooker::getSettings()->value("another key state"), KeyBoardHooker::getSettings()->value("Ctrl state") | KeyBoardHooker::getSettings()->value("Alt state"));
+                                        Keeper::changeLnk(wHotKey);
                                     }
     });
     connect(this->ui->pushButtonDelUR, &QPushButton::pressed, [this] () {
@@ -476,98 +395,98 @@ void MainWindow::createConnectButtons()
 void MainWindow::createConnectCheckBoxes()
 {
     connect(this->ui->checkBoxAutoStart, &QCheckBox::stateChanged, [this] (int state) {
-                                        KeyBoardHooker::setTempSetting("autorun", static_cast<unsigned int>(state));
-                                        this->ui->pushButtonCancel->setEnabled(true);
+                                    KeyBoardHooker::setTempSetting("autorun", static_cast<unsigned int>(state));
+                                    this->ui->pushButtonCancel->setEnabled(true);
     });
     connect(this->ui->checkBoxStartKey, &QCheckBox::stateChanged, [this] (int state) {
-                                        if(static_cast<unsigned int>(state) == Qt::Checked)
-                                            this->ui->lineEditStarKey->setEnabled(true);
-                                        else this->ui->lineEditStarKey->setEnabled(false);
+                                    if(static_cast<unsigned int>(state) == Qt::Checked)
+                                        this->ui->lineEditStarKey->setEnabled(true);
+                                    else this->ui->lineEditStarKey->setEnabled(false);
 
-                                        KeyBoardHooker::setTempSetting("hot key", static_cast<unsigned int>(state));
-                                        KeyBoardHooker::setTempSetting("Ctrl state", 0);
-                                        KeyBoardHooker::setTempSetting("Alt state", 0);
-                                        KeyBoardHooker::setTempSetting("another key state", 0);
-                                        this->ui->pushButtonCancel->setEnabled(true);
+                                    KeyBoardHooker::setTempSetting("hot key", static_cast<unsigned int>(state));
+                                    KeyBoardHooker::setTempSetting("Ctrl state", 0);
+                                    KeyBoardHooker::setTempSetting("Alt state", 0);
+                                    KeyBoardHooker::setTempSetting("another key state", 0);
+                                    this->ui->pushButtonCancel->setEnabled(true);
     });
 }
 
 void MainWindow::createConnectLanguages()
 {
     connect(englishAction, &QAction::triggered, this, [this] {
-                                        this->retranslateApp(English);
-                                        KeyBoardHooker::setTempSetting("language", static_cast<unsigned int>(English));
-                                        this->ui->pushButtonCancel->setEnabled(true);
+                                    this->retranslateApp(English);
+                                    KeyBoardHooker::setTempSetting("language", static_cast<unsigned int>(English));
+                                    this->ui->pushButtonCancel->setEnabled(true);
     });
     connect(russianAction, &QAction::triggered, this, [this] {
-                                        this->retranslateApp(Russian);
-                                        KeyBoardHooker::setTempSetting("language", static_cast<unsigned int>(Russian));
-                                        this->ui->pushButtonCancel->setEnabled(true);
+                                    this->retranslateApp(Russian);
+                                    KeyBoardHooker::setTempSetting("language", static_cast<unsigned int>(Russian));
+                                    this->ui->pushButtonCancel->setEnabled(true);
     });
     connect(ukrainianAction, &QAction::triggered, this, [this] {
-                                        this->retranslateApp(Ukrainian);
-                                        KeyBoardHooker::setTempSetting("language", static_cast<unsigned int>(Ukrainian));
-                                        this->ui->pushButtonCancel->setEnabled(true);
+                                    this->retranslateApp(Ukrainian);
+                                    KeyBoardHooker::setTempSetting("language", static_cast<unsigned int>(Ukrainian));
+                                    this->ui->pushButtonCancel->setEnabled(true);
     });
 }
 
 void MainWindow::createConnectLineEdits()
 {
     connect(this->ui->lineEditUpRight, &QLineEdit::textChanged, [this] (QString str) {
-                                        this->ui->pushButtonDelUR->setEnabled(!str.isEmpty());
+                                    this->ui->pushButtonDelUR->setEnabled(!str.isEmpty());
     });
     connect(this->ui->lineEditUpLeft, &QLineEdit::textChanged, [this] (QString str) {
-                                        this->ui->pushButtonDelUL->setEnabled(!str.isEmpty());
+                                    this->ui->pushButtonDelUL->setEnabled(!str.isEmpty());
     });
     connect(this->ui->lineEditDownRight, &QLineEdit::textChanged, [this] (QString str) {
-                                        this->ui->pushButtonDelDR->setEnabled(!str.isEmpty());
+                                    this->ui->pushButtonDelDR->setEnabled(!str.isEmpty());
     });
     connect(this->ui->lineEditDownLeft, &QLineEdit::textChanged, [this] (QString str) {
-                                        this->ui->pushButtonDelDL->setEnabled(!str.isEmpty());
+                                    this->ui->pushButtonDelDL->setEnabled(!str.isEmpty());
     });
     connect(this->ui->lineEditWheelUp, &QLineEdit::textChanged, [this] (QString str) {
-                                        this->ui->pushButtonDelWU->setEnabled(!str.isEmpty());
+                                    this->ui->pushButtonDelWU->setEnabled(!str.isEmpty());
     });
     connect(this->ui->lineEditWheelDown, &QLineEdit::textChanged, [this] (QString str) {
-                                        this->ui->pushButtonDelWD->setEnabled(!str.isEmpty());
+                                    this->ui->pushButtonDelWD->setEnabled(!str.isEmpty());
     });
 }
 
 void MainWindow::createConnectSliders()
 {
     connect(this->ui->sliderSpeedX, &QSlider::valueChanged, [this] (int value) {
-                                this->ui->spinBoxSpeedX->setValue(value);
-                                KeyBoardHooker::setTempSetting("speed x", static_cast<unsigned int>(value));
-                                this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->spinBoxSpeedX->setValue(value);
+                                    KeyBoardHooker::setTempSetting("speed x", static_cast<unsigned int>(value));
+                                    this->ui->pushButtonCancel->setEnabled(true);
     });
     connect(this->ui->sliderSpeedY, &QSlider::valueChanged, [this] (int value) {
-                                this->ui->spinBoxSpeedY->setValue(value);
-                                KeyBoardHooker::setTempSetting("speed y", static_cast<unsigned int>(value));
-                                this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->spinBoxSpeedY->setValue(value);
+                                    KeyBoardHooker::setTempSetting("speed y", static_cast<unsigned int>(value));
+                                    this->ui->pushButtonCancel->setEnabled(true);
     });
     connect(this->ui->sliderSpeedWheel, &QSlider::valueChanged, [this] (int value) {
-                                this->ui->spinBoxSpeedWheel->setValue(value);
-                                KeyBoardHooker::setTempSetting("speed wheel", static_cast<unsigned int>(value));
-                                this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->spinBoxSpeedWheel->setValue(value);
+                                    KeyBoardHooker::setTempSetting("speed wheel", static_cast<unsigned int>(value));
+                                    this->ui->pushButtonCancel->setEnabled(true);
     });
 }
 
 void MainWindow::createConnectSpinBoxes()
 {
     connect(this->ui->spinBoxSpeedX, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this] (int value) {
-                                this->ui->sliderSpeedX->setValue(value);
-                                KeyBoardHooker::setTempSetting("speed x", static_cast<unsigned int>(value));
-                                this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->sliderSpeedX->setValue(value);
+                                    KeyBoardHooker::setTempSetting("speed x", static_cast<unsigned int>(value));
+                                    this->ui->pushButtonCancel->setEnabled(true);
     });
     connect(this->ui->spinBoxSpeedY, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this] (int value) {
-                                this->ui->sliderSpeedY->setValue(value);
-                                KeyBoardHooker::setTempSetting("speed y", static_cast<unsigned int>(value));
-                                this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->sliderSpeedY->setValue(value);
+                                    KeyBoardHooker::setTempSetting("speed y", static_cast<unsigned int>(value));
+                                    this->ui->pushButtonCancel->setEnabled(true);
     });
     connect(this->ui->spinBoxSpeedWheel, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this] (int value) {
-                                this->ui->sliderSpeedWheel->setValue(value);
-                                KeyBoardHooker::setTempSetting("speed wheel", static_cast<unsigned int>(value));
-                                this->ui->pushButtonCancel->setEnabled(true);
+                                    this->ui->sliderSpeedWheel->setValue(value);
+                                    KeyBoardHooker::setTempSetting("speed wheel", static_cast<unsigned int>(value));
+                                    this->ui->pushButtonCancel->setEnabled(true);
     });
 }
 

@@ -3,19 +3,20 @@
 
 /***************************************
  * Этот класс реализует окно программы. Управляет отображением настроек, а также их изменением пользователем.
- * В процессе сохранения настроек позволяет добавить (удалить) программу в атозапуск и создать ярлык с нужными горячими клавишами
+ * В процессе сохранения настроек позволяет добавить (удалить) программу в атозапуск и создать ярлык с нужными горячими клавишами.
+ * Для этого используются функции класса Keeper: addToAutorun, removeFromAutorun, changeLnk
  * ************************************/
 
 #include "translationinfo.h"
 #include <QMainWindow>
-using WORD = unsigned short;
+
 
 class Keeper;
 class QLineEdit;
 class QSystemTrayIcon;
 
 namespace Ui {
-class MainWindow;
+    class MainWindow;
 }
 
 class MainWindow : public QMainWindow
@@ -48,12 +49,8 @@ public:
     bool isStartKeyLineEdit(const QLineEdit *); // проверяет, активное поле - это поле для стартовой комбинации или нет
     QVector<int> *load(QMap<QString, unsigned int> *settings); // вызывает соответствующий метод класса Keeper
     int save(const QMap<QString, unsigned int> *settings); // вызывает соответствующий метод класса Keeper
-
-    // ярлык нужен для того, чтобы можно было запустить программу по нажатии комбинации клавиш
-    HRESULT changeLnk(WORD); // создает ярлык с заданными настройками  в папке <USERPROFILE>/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/
     QString getHotKeyCombinationString(const QMap<QString, unsigned int> *settings); // генерирует строку с именами клавиш, входящих в комбинацию для запуска
     static QLineEdit *getFocusedLineEdit();
-    void addToAutorun();
     void allowClose(bool);
     void displaySettings(const QMap<QString, unsigned int> *settings); // зполняет необходимые виджеты формы нужными данными, полученными от KeyBoardHooker
 

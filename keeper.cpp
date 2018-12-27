@@ -1,16 +1,23 @@
 #include "keeper.h"
+#include "shlobj.h"
 #include "translationinfo.h"
+#include "windows.h"
 #include <QApplication>
+#include <QDebug>
 #include <QFile>
 #include <QDir>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMap>
+#include <QProcessEnvironment>
+#include <QSettings>
 #include <QVector>
 
 Keeper::Keeper(QObject *parent) : QObject(parent)
 {
-
+    QProcessEnvironment env(QProcessEnvironment::systemEnvironment());
+    settingDirPath = QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Local/Mouse Emulator Pro");
+    settingFilePath = QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Local/Mouse Emulator Pro/settings.json");
 }
 
 int Keeper::saveSettings(const QMap<QString, unsigned int> &settings)
@@ -44,9 +51,11 @@ int Keeper::saveSettings(const QMap<QString, unsigned int> &settings)
     QJsonDocument jsonDoc;
     jsonDoc.setObject(obj);
 
-    QFile file;
-    file.setFileName("settings.json");
+    if(!QFile::exists(settingDirPath))
+        QDir().mkdir(settingDirPath);
 
+    QFile file;
+    file.setFileName(settingFilePath);
     try
     {
         if(!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
@@ -66,13 +75,13 @@ int Keeper::saveSettings(const QMap<QString, unsigned int> &settings)
 
 void Keeper::removeSettingsFile()
 {
-    QFile("settings.json").remove();
+    QFile(settingFilePath).remove();
 }
 
 QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
 {
     QFile file;
-    file.setFileName("settings.json");
+    file.setFileName(settingFilePath);
 
     try
     {
@@ -182,4 +191,96 @@ QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
     else settings.insert("language", static_cast<Language>(jsonDoc.object().value("language").toInt()));
 
     return errors;
+}
+
+HRESULT Keeper::changeLnk(WORD wHotKey)
+{
+    HRESULT hRes = 0;
+#ifdef Q_OS_WIN32
+
+    // Создание ярлыка
+    // Входные параметры:
+    //  pwzShortCutFileName - путь и имя ярлыка, например, "C:\\Блокнот.lnk"
+    //  Если не указан путь, ярлык будет создан в папке, указанной в следующем параметре.
+    //  Прим.: Windows сама НЕ добавляет к имени расширение .lnk
+    //  pszPathAndFileName  - путь и имя exe-файла, например, "C:\\Windows\\NotePad.Exe"
+    //  pszWorkingDirectory - рабочий каталог, например, "C:\\Windows"
+    //  pszArguments        - аргументы командной строки, например, "C:\\Doc\\Text.Txt"
+    //  wHotKey             - горячая клавиша, например, для Ctrl+Alt+A     HOTKEY(HOTKEYF_ALT|HOTKEYF_CONTROL,'A')
+    //  iCmdShow            - начальный вид, например, SW_SHOWNORMAL
+    //  pszIconFileName     - путь и имя файла, содержащего иконку, например, "C:\\Windows\\NotePad.Exe"
+    //  int iIconIndex      - индекс иконки в файле, нумеруется с 0
+
+    CoInitialize(nullptr);
+    IShellLink * pSL;
+    IPersistFile * pPF;
+
+    // Получение экземпляра компонента "Ярлык"
+    hRes = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLink, reinterpret_cast<LPVOID *>(&pSL));
+    if( SUCCEEDED(hRes) )
+    {
+        hRes = pSL->SetPath(QDir::toNativeSeparators(QApplication::applicationFilePath()).toStdWString().c_str());
+        if( SUCCEEDED(hRes) )
+        {
+            hRes = pSL->SetWorkingDirectory(QDir::toNativeSeparators(QApplication::applicationDirPath()).toStdWString().c_str());
+            if( SUCCEEDED(hRes) )
+            {
+                hRes = pSL->SetArguments(L"");
+                if( SUCCEEDED(hRes) )
+                {
+                    hRes = pSL->SetIconLocation(QDir::toNativeSeparators(QApplication::applicationFilePath()).toStdWString().c_str(), 0);
+                    if( SUCCEEDED(hRes) )
+                    {
+                        hRes = pSL->SetHotkey(wHotKey);
+                        if( SUCCEEDED(hRes) )
+                        {
+                            hRes = pSL->SetShowCmd(SW_SHOWNORMAL);
+                            if( SUCCEEDED(hRes) )
+                            {
+                                // Получение компонента хранилища параметров
+                                hRes = pSL->QueryInterface(IID_IPersistFile,reinterpret_cast<LPVOID *>(&pPF));
+                                if( SUCCEEDED(hRes) )
+                                {
+                                    // Сохранение созданного ярлыка
+                                    QProcessEnvironment env(QProcessEnvironment::systemEnvironment());
+                                    if(!QFile::exists(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro")))
+                                        QDir().mkdir(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro"));
+                                    hRes = pPF->Save(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro/Mouse Emulator Pro.lnk").toStdWString().c_str(),TRUE);
+                                    pPF->Release();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        pSL->Release();
+    }
+    CoUninitialize();
+
+#endif
+    return hRes;
+}
+
+int Keeper::checkAppInAutorun()
+{
+    QSettings qs;
+    return qs.value("Mouse Emulator Pro", -2).toInt();
+}
+
+void Keeper::addToAutorun()
+{
+    #ifdef Q_OS_WIN32
+        QSettings settings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
+        settings.setValue("Mouse Emulator Pro", QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));
+        settings.sync();
+    #endif
+}
+
+void Keeper::removeFromAutorun()
+{
+    #ifdef Q_OS_WIN32
+        QSettings settings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
+        settings.remove("Mouse Emulator Pro");
+    #endif
 }

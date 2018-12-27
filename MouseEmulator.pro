@@ -49,6 +49,6 @@ TRANSLATIONS    = translates/ukrainian.ts \
                   translates/russian.ts \
                   translates/english.ts
 
-RC_ICONS = images/icon.ico
+win32:RC_ICONS += images/icon.ico
 
 LIBS += -lole32 -luuid
