@@ -4,19 +4,18 @@
 #include "windows.h"
 #include <QApplication>
 
-MainWindow *w;
-
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     QApplication::setQuitOnLastWindowClosed(false);
 
+    MainWindow *w;
     w = new MainWindow();
-    QObject::connect(qApp, &QCoreApplication::aboutToQuit, w, [] () {w->allowClose(true); w->close(); delete w;});
+    QObject::connect(qApp, &QCoreApplication::aboutToQuit, w, [w] () {w->allowClose(true); w->close(); delete w;});
     w->show();
 
     KeyBoardHooker::instance();
-    KeyBoardHooker::instance().setParent(w);
+    KeyBoardHooker::setParent(w);
 
     // конфигурируем настройки, считав сперва настройки из файла и получив код, указывающий на кол-во правильно считанных настроек
     KeyBoardHooker::configureSettings( w->load(KeyBoardHooker::getSettings()) );

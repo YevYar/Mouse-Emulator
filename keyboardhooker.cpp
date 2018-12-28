@@ -8,8 +8,9 @@
 #include <QMessageBox>
 #include <QTranslator>
 
-extern MainWindow *w;
 HHOOK KeyBoardHooker::keyboardHook;
+HINSTANCE KeyBoardHooker::hInstance;
+MainWindow *KeyBoardHooker::parent;
 QMap<QString, unsigned int> KeyBoardHooker::settings;
 QMap<QString, unsigned int> KeyBoardHooker::tempSettings;
 
@@ -155,7 +156,7 @@ void KeyBoardHooker::unhookExit()
 
 void KeyBoardHooker::setParent(MainWindow *parent)
 {
-    this->parent = parent;
+    KeyBoardHooker::parent = parent;
 }
 
 bool KeyBoardHooker::isContainKey(unsigned int key, bool settingMap)
@@ -193,8 +194,8 @@ LRESULT CALLBACK KeyBoardHooker::keyboardHookProc(int nCode, WPARAM wParam, LPAR
     if (p->vkCode == VK_F12 && bControlKeyDown)
         KeyBoardHooker::unhookExit();
     // Проверка, если F11 + CTRL были нажаты и окно было скрыто, если да -> открыть окно программы
-    if (p->vkCode == VK_F11 && bControlKeyDown && !w->isVisible())
-        w->show();
+    if (p->vkCode == VK_F11 && bControlKeyDown && !parent->isVisible())
+        parent->show();
 
     static bool leftMouseButDown = false;
     static bool rightMouseButDown = false;
@@ -230,9 +231,9 @@ LRESULT CALLBACK KeyBoardHooker::keyboardHookProc(int nCode, WPARAM wParam, LPAR
     }
     else if (wParam == WM_SYSKEYDOWN || wParam == WM_KEYDOWN)
     {
-        if(w->isActiveWindow() && w->getFocusedLineEdit() != nullptr && p->vkCode != VK_TAB)
+        if(parent->isActiveWindow() && parent->getFocusedLineEdit() != nullptr && p->vkCode != VK_TAB)
         {
-            if(w->isStartKeyLineEdit(w->getFocusedLineEdit()) && p->vkCode != VK_MENU && p->vkCode != VK_CONTROL)
+            if(parent->isStartKeyLineEdit(parent->getFocusedLineEdit()) && p->vkCode != VK_MENU && p->vkCode != VK_CONTROL)
             {
                 if(!tempSettings.contains("Ctrl state"))
                 {
@@ -253,26 +254,26 @@ LRESULT CALLBACK KeyBoardHooker::keyboardHookProc(int nCode, WPARAM wParam, LPAR
                 }
                 tempSettings["another key state"] = p->vkCode;
                 hotKey += getKeyNameByVirtualKey(p->vkCode);
-                 w->getFocusedLineEdit()->setText(hotKey);
+                parent->getFocusedLineEdit()->setText(hotKey);
             }
             else
             {
                 QString tmpKeyName = getKeyNameByVirtualKey(p->vkCode);
-                QString tmpSettingName0 = getSettingNameByKeyName( w->getFocusedLineEdit()->text());
-                QString tmpSettingName1 = getSettingNameByKeyName( w->getFocusedLineEdit()->text(), 1);
-                if(tmpKeyName == w->getFocusedLineEdit()->text())
+                QString tmpSettingName0 = getSettingNameByKeyName( parent->getFocusedLineEdit()->text());
+                QString tmpSettingName1 = getSettingNameByKeyName( parent->getFocusedLineEdit()->text(), 1);
+                if(tmpKeyName == parent->getFocusedLineEdit()->text())
                 {
                     //return 0;
                 }
                 else if( !tmpKeyName.isEmpty() && !isContainKey(p->vkCode, 1) && !isSM0ContainKeyWithoutCrossing(p->vkCode))
                 {
                     setTempSetting(tmpSettingName1.isEmpty() ? tmpSettingName0 : tmpSettingName1, p->vkCode);
-                    w->getFocusedLineEdit()->setText(tmpKeyName);
+                    parent->getFocusedLineEdit()->setText(tmpKeyName);
                     return 0;
                 }
                 else
                 {
-                    w->getFocusedLineEdit()->clearFocus();
+                    parent->getFocusedLineEdit()->clearFocus();
                     QMessageBox *msg = new QMessageBox(QMessageBox::Warning, tr("Увага"), tr("<p style='font-size:12pt'>Обрана клавіша вже використовується.</p>"), QMessageBox::Ok);
                     connect(msg, &QMessageBox::finished, msg, &QMessageBox::deleteLater);
                     msg->open();

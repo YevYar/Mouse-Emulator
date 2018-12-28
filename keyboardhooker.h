@@ -16,9 +16,9 @@ class KeyBoardHooker : public QObject
 {
     Q_OBJECT
 
-    HINSTANCE hInstance;
-    MainWindow *parent;
     static HHOOK keyboardHook;
+    static HINSTANCE hInstance;
+    static MainWindow *parent;
     static QMap<QString, unsigned int> settings; // settingMap = 0 (SM0) - содержит настройки программы, полученные из файла или программно сгенерированные
     static QMap<QString, unsigned int> tempSettings; // settingMap = 1 (SM1) - содержит настройки, которые были изменены, но еще не сохранены
 
@@ -35,8 +35,8 @@ public:
     static QString getSettingNameByKeyName(QString, bool settingMap = 0); // возвращает название настройки (или пустую строку) из нужного SM по коду клавиши
     static void configureSettings(QVector<int> *); // генерирует SM0, получая на входе данные о несчитанных из файла настройках и генерирует их
     static void setNewKeyValue(QString  key, unsigned int value);
+    static void setParent(MainWindow *);
     static void unhookExit(); // снимает хук и завершает работу программы
-    void setParent(MainWindow *);
 
 };
 
