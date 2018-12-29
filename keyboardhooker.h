@@ -27,7 +27,7 @@ public:
     static bool isContainKey(unsigned int key, bool settingMap = 0); // проверка наличия в выбранном QMap указанного кода клавиши
     static bool isSM0ContainKeyWithoutCrossing(unsigned int key); // метод для проверки наличия кода клавиши в SM0 с обязательным отсутствием её ключа в SM1
     static bool setTempSetting(QString  key, unsigned int value);
-    static KeyBoardHooker &instance(); // возвращает объект этого класса. Реализует паттерн синглетон
+    static KeyBoardHooker &instance(MainWindow *parent = nullptr); // возвращает объект этого класса. Реализует паттерн синглетон
     static LRESULT CALLBACK keyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam); // основной метод (обрабатывает хук), получает управление при появлении в системе события от клавиатуры
     static QMap<QString, unsigned int> *getSettings();
     static QMap<QString, unsigned int> *getTempSettings();
@@ -35,8 +35,10 @@ public:
     static QString getSettingNameByKeyName(QString, bool settingMap = 0); // возвращает название настройки (или пустую строку) из нужного SM по коду клавиши
     static void configureSettings(QVector<int> *); // генерирует SM0, получая на входе данные о несчитанных из файла настройках и генерирует их
     static void setNewKeyValue(QString  key, unsigned int value);
-    static void setParent(MainWindow *);
     static void unhookExit(); // снимает хук и завершает работу программы
+
+private:
+    static void setParent(MainWindow *parent);
 
 };
 

@@ -7,6 +7,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QTranslator>
+#include <QThread>
 
 HHOOK KeyBoardHooker::keyboardHook;
 HINSTANCE KeyBoardHooker::hInstance;
@@ -18,9 +19,7 @@ KeyBoardHooker::KeyBoardHooker(QObject *parent) : QObject(parent)
 {
     hInstance = GetModuleHandle(nullptr);
     keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHookProc, hInstance, 0);
-
-    if(keyboardHook == nullptr)
-        QMessageBox::critical(nullptr, tr("Критична помилка"), tr("<p style='font-size:12pt'>Програма не може виконувати основну функцію (керувати мишкою за допомогою клавіатури) через помилку під'єднання до системних подій.</p>"));
+    parent = nullptr;
 }
 
 QMap<QString, unsigned int> *KeyBoardHooker::getSettings()
@@ -127,6 +126,11 @@ void KeyBoardHooker::setNewKeyValue(QString key, unsigned int value)
     settings[key] = value;
 }
 
+void KeyBoardHooker::setParent(MainWindow *parent)
+{
+    KeyBoardHooker::parent = parent;
+}
+
 bool KeyBoardHooker::setTempSetting(QString key, unsigned int value)
 {
     if(!tempSettings.contains(key)) // во временных настройках нет такого ключа
@@ -142,9 +146,16 @@ bool KeyBoardHooker::setTempSetting(QString key, unsigned int value)
     return true; // кнопка была добавлена в временный массив ранее
 }
 
-KeyBoardHooker &KeyBoardHooker::instance()
+KeyBoardHooker &KeyBoardHooker::instance(MainWindow *parent)
 {
     static KeyBoardHooker instance;
+    if(KeyBoardHooker::parent == nullptr)
+    {
+        KeyBoardHooker::setParent(parent);
+
+        if(keyboardHook == nullptr)
+            QApplication::postEvent(parent, new QEvent(static_cast<QEvent::Type>(parent->getHookNotExecutedEventId())));
+    }
     return instance;
 }
 
@@ -152,11 +163,6 @@ void KeyBoardHooker::unhookExit()
 {
     UnhookWindowsHookEx(KeyBoardHooker::keyboardHook);
     QCoreApplication::quit();
-}
-
-void KeyBoardHooker::setParent(MainWindow *parent)
-{
-    KeyBoardHooker::parent = parent;
 }
 
 bool KeyBoardHooker::isContainKey(unsigned int key, bool settingMap)
@@ -274,11 +280,7 @@ LRESULT CALLBACK KeyBoardHooker::keyboardHookProc(int nCode, WPARAM wParam, LPAR
                 else
                 {
                     parent->getFocusedLineEdit()->clearFocus();
-                    QMessageBox *msg = new QMessageBox(QMessageBox::Warning, tr("Увага"), tr("<p style='font-size:12pt'>Обрана клавіша вже використовується.</p>"), QMessageBox::Ok);
-                    connect(msg, &QMessageBox::finished, msg, &QMessageBox::deleteLater);
-                    msg->open();
-                    //delete msg;
-                    //::warning(w, tr("Увага"), tr("<p style='font-size:12pt'>Обрана клавіша вже використовується.</p>"));
+                    QApplication::postEvent(parent, new QEvent(static_cast<QEvent::Type>(parent->getKeyIsUsedEventId())));
                 }
             }
         }

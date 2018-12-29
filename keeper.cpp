@@ -94,7 +94,6 @@ QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
         return new QVector<int>(QVector<int>::fromStdVector(errors)); // ошибка: нет файла
     }
 
-
     QJsonDocument jsonDoc = QJsonDocument::fromJson(file.readAll());
     file.close();
 
@@ -245,6 +244,7 @@ HRESULT Keeper::changeLnk(WORD wHotKey)
                                     QProcessEnvironment env(QProcessEnvironment::systemEnvironment());
                                     if(!QFile::exists(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro")))
                                         QDir().mkdir(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro"));
+                                    qDebug() << QDir().remove(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro/Mouse Emulator Pro.lnk");
                                     hRes = pPF->Save(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro/Mouse Emulator Pro.lnk").toStdWString().c_str(),TRUE);
                                     pPF->Release();
                                 }
@@ -257,6 +257,8 @@ HRESULT Keeper::changeLnk(WORD wHotKey)
         pSL->Release();
     }
     CoUninitialize();
+    delete pSL;
+    delete pPF;
 
 #endif
     return hRes;

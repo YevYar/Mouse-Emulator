@@ -14,8 +14,7 @@ int main(int argc, char *argv[])
     QObject::connect(qApp, &QCoreApplication::aboutToQuit, w, [w] () {w->allowClose(true); w->close(); delete w;});
     w->show();
 
-    KeyBoardHooker::instance();
-    KeyBoardHooker::setParent(w);
+    KeyBoardHooker::instance(w);
 
     // конфигурируем настройки, считав сперва настройки из файла и получив код, указывающий на кол-во правильно считанных настроек
     KeyBoardHooker::configureSettings( w->load(KeyBoardHooker::getSettings()) );

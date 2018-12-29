@@ -8,6 +8,7 @@
 #include <QAction>
 #include <QCloseEvent>
 #include <QDebug>
+#include <QEvent>
 #include <QDir>
 #include <QIcon>
 #include <QImage>
@@ -16,6 +17,7 @@
 #include <QProcessEnvironment>
 #include <QSystemTrayIcon>
 #include <QTranslator>
+#include <QThread>
 
 QLineEdit * MainWindow::focusedLineEdit = nullptr;
 
@@ -36,6 +38,9 @@ MainWindow::MainWindow(QWidget *parent) :
     setCaptionsToSomeUiEl();
     createConnects();
     installEventFilters();
+
+    hookNotExecuted = QEvent::registerEventType();
+    keyIsUsedEvent = QEvent::registerEventType();
 }
 
 MainWindow::~MainWindow()
@@ -44,6 +49,21 @@ MainWindow::~MainWindow()
         keeper->saveSettings(*KeyBoardHooker::getSettings());
     trayIcon->hide();
     delete ui;
+}
+
+bool MainWindow::event(QEvent *ev)
+{
+    if(ev->type() == hookNotExecuted)
+    {
+        showHookNotExecutedError();
+        return true;
+    }
+    if(ev->type() == keyIsUsedEvent)
+    {
+        showKeyIsUsedError();
+        return true;
+    }
+    return QMainWindow::event(ev);
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
@@ -66,6 +86,16 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 bool MainWindow::isStartKeyLineEdit(const QLineEdit *line)
 {
     return line == this->ui->lineEditStarKey;
+}
+
+int MainWindow::getHookNotExecutedEventId()
+{
+    return hookNotExecuted;
+}
+
+int MainWindow::getKeyIsUsedEventId()
+{
+    return keyIsUsedEvent;
 }
 
 QVector<int> *MainWindow::load(QMap<QString, unsigned int> *settings)
@@ -171,6 +201,16 @@ void MainWindow::displaySettings(const QMap<QString, unsigned int> *settings)
         ukrainianAction->setIcon(QIcon(QPixmap::fromImage(QImage(":images/ukraine.png").convertToFormat(QImage::Format_Grayscale8))));
     }
     else retranslateApp(static_cast<Language>(settings->value("language")));
+}
+
+void MainWindow::showHookNotExecutedError()
+{
+    QMessageBox::critical(nullptr, tr("Критична помилка"), tr("<p style='font-size:12pt'>Програма не може виконувати основну функцію (керувати мишкою за допомогою клавіатури) через помилку під'єднання до системних подій.</p>"));
+}
+
+void MainWindow::showKeyIsUsedError()
+{
+    QMessageBox::warning(this, tr("Увага"), tr("<p style='font-size:12pt'>Обрана клавіша вже використовується.</p>"));
 }
 
 void MainWindow::installEventFilters()
