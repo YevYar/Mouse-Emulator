@@ -244,7 +244,7 @@ HRESULT Keeper::changeLnk(WORD wHotKey)
                                     QProcessEnvironment env(QProcessEnvironment::systemEnvironment());
                                     if(!QFile::exists(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro")))
                                         QDir().mkdir(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro"));
-                                    qDebug() << QDir().remove(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro/Mouse Emulator Pro.lnk");
+                                    //QDir().remove(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro/Mouse Emulator Pro.lnk");
                                     hRes = pPF->Save(QDir::toNativeSeparators(env.value("USERPROFILE") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Mouse Emulator Pro/Mouse Emulator Pro.lnk").toStdWString().c_str(),TRUE);
                                     pPF->Release();
                                 }

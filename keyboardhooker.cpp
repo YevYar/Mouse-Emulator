@@ -119,6 +119,8 @@ void KeyBoardHooker::configureSettings(QVector<int> *errors)
         settings.insert("wheel down", 0x6d);
     if(errors->contains(20))
         settings.insert("language", Ukrainian);
+
+    delete errors;
 }
 
 void KeyBoardHooker::setNewKeyValue(QString key, unsigned int value)
