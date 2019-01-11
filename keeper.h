@@ -12,6 +12,7 @@
  * ************************************/
 
 #include <QObject>
+
 using WORD = unsigned short;
 using LONG = long;
 using HRESULT = LONG;
@@ -25,6 +26,7 @@ class Keeper : public QObject
 
 public:
     Keeper(QObject *parent = nullptr);
+
     QVector<int> *loadSettings(QMap<QString, unsigned int> &settings);
     int saveSettings(const QMap<QString, unsigned int> &settings);
 

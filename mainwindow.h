@@ -10,7 +10,6 @@
 #include "translationinfo.h"
 #include <QMainWindow>
 
-
 class Keeper;
 class QLineEdit;
 class QSystemTrayIcon;

@@ -76,7 +76,11 @@ QString KeyBoardHooker::getSettingNameByKeyName(QString keyName, bool settingMap
 void KeyBoardHooker::configureSettings(QVector<int> *errors)
 {
     if(errors->isEmpty())
+    {
+        delete errors;
         return;
+    }
+
     if(errors->contains(0))
         settings.insert("speed x", 5);
     if(errors->contains(1))
