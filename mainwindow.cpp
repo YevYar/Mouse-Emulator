@@ -355,13 +355,7 @@ void MainWindow::createConnectButtons()
                                             }
                                         }
 
-                                        QMap<QString, unsigned int>::const_iterator i = KeyBoardHooker::getTempSettings()->constBegin();
-                                        while (i != KeyBoardHooker::getTempSettings()->constEnd()) {
-                                            KeyBoardHooker::setNewKeyValue(i.key(), i.value());
-                                            ++i;
-                                        }
-
-                                        KeyBoardHooker::getTempSettings()->clear();
+                                        KeyBoardHooker::replaceSM0BySM1();
                                         itWasChanged = true;
 
                                         this->ui->pushButtonCancel->setEnabled(false);

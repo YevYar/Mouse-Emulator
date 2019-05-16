@@ -34,6 +34,7 @@ public:
     static QString getKeyNameByVirtualKey(unsigned int); // возвращает имя клавиши, которое соответствует переданному коду клавиши
     static QString getSettingNameByKeyName(QString, bool settingMap = 0); // возвращает название настройки (или пустую строку) из нужного SM по коду клавиши
     static void configureSettings(QVector<int> *); // генерирует SM0, получая на входе данные о несчитанных из файла настройках и генерирует их
+    static void replaceSM0BySM1();
     static void setNewKeyValue(QString  key, unsigned int value);
     static void unhookExit(); // снимает хук и завершает работу программы
 

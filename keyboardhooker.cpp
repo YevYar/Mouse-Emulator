@@ -127,6 +127,17 @@ void KeyBoardHooker::configureSettings(QVector<int> *errors)
     delete errors;
 }
 
+void KeyBoardHooker::replaceSM0BySM1()
+{
+    QMap<QString, unsigned int>::const_iterator i = tempSettings.constBegin();
+    while (i != tempSettings.constEnd()) {
+        KeyBoardHooker::setNewKeyValue(i.key(), i.value());
+        ++i;
+    }
+
+    tempSettings.clear();
+}
+
 void KeyBoardHooker::setNewKeyValue(QString key, unsigned int value)
 {
     settings[key] = value;

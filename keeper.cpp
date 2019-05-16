@@ -63,6 +63,7 @@ int Keeper::saveSettings(const QMap<QString, unsigned int> &settings)
     }
     catch(int key)
     {
+        file.close();
         return key; // ошибка создания файла
     }
 
@@ -90,6 +91,7 @@ QVector<int> *Keeper::loadSettings(QMap<QString, unsigned int> &settings)
     }
     catch(int key)
     {
+        file.close();
         std::vector<int> errors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
         return new QVector<int>(QVector<int>::fromStdVector(errors)); // ошибка: нет файла
     }
